@@ -11,9 +11,10 @@ class WalletGUI:
     def __init__(self, wallet):
         self.wallet: Wallet = wallet
         self.root = tk.Tk()
+        self.root.configure(bg='lightgrey')
+        style = ttk.Style()
+        style.theme_use('clam')
         self.tree = ttk.Treeview(self.root)
-
-
 
         # set dimensions della tabella
         self.tree["columns"] = list(self.wallet.df.columns)
@@ -23,7 +24,7 @@ class WalletGUI:
             self.tree.column(column, width=100)
         
         # pack the treeview
-        self.tree.pack()
+        self.tree.pack(side = tk.TOP, fill = tk.BOTH, expand = True)
         self.root.title("Wallet")
 
         self.add_expense_button = tk.Button(self.root, text="Add Expense", command=self.add_expense)
@@ -182,7 +183,13 @@ class WalletGUI:
             for index, row in expenses.iterrows():
                 self.tree.insert('', 'end', values=list(row))
 
-    
+        # aggiusta le dimensioni della tabella
+        self.tree["columns"] = list(self.wallet.df.columns)
+        self.tree["show"] = "headings"
+        for column in self.tree["columns"]:
+            self.tree.heading(column, text=column)
+            self.tree.column(column, width=100)
+        self.tree.pack(side = tk.TOP, fill = tk.BOTH, expand = True)
 
         # cancella il vecchio label e aggiungi il nuovo
         self.total_expenses_label.destroy()
@@ -242,10 +249,6 @@ class WalletGUI:
 
 wallet = Wallet()  # Assuming Wallet is the class from classes.py
 wallet.read_csv('wallet.csv')
-print(wallet.df)
-print(wallet.amount)
-
-
 
 gui = WalletGUI(wallet)
 gui.run()
