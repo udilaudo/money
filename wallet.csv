@@ -1,10 +1,15 @@
 Amount,Category,Description,Y,M,D,Type
--25.0,Food,Cena,2024,4,2,0
--100.0,Food,Pizza,2024,5,1,0
+-25.0,Spesa,Cena,2024,4,2,0
+-100.0,Spesa,Pizza,2024,5,1,0
 -10.0,Sport,Calcetto,2024,5,3,0
 -70.0,Bollette,Luce,2024,4,5,0
--14.0,Food,spesa,2024,5,7,0
+-14.0,Spesa,spesa,2024,5,7,0
 -33.0,Bollette,gas,2024,3,1,0
-1000.0,Stipendio,Stipendio,2024,5,1,1
+1000.0,Entrate,Stipendio,2024,5,1,1
 -1.0,Spesa,denti,2024,6,10,0
--3,Spesa,spesa,2023,6,10,0
+-3.0,Spesa,spesa,2023,6,10,0
+-11.0,Casa,,2022,3,1,0
+-133.0,Auto,benz,2024,6,10,0
+1300.0,Entrate,Stipendio2,2024,6,1,1
+-54.0,Mangiare Fuori,,2024,6,10,0
+-12.0,Auto,aaa,2024,6,10,0
