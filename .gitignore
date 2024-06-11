@@ -1,0 +1,7 @@
+# ignora la cartella dist
+dist/
+build/
+# ignora le immagini
+*.webp
+*.ico
+*.spec
