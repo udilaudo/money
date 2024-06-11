@@ -3,8 +3,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import tkinter as tk
 from tkinter import ttk, messagebox
-
+from tkinter import filedialog
 from PIL import Image, ImageTk
+import os
 
 # datatime
 from datetime import datetime
@@ -15,7 +16,7 @@ from datetime import datetime
 class Wallet:
     def __init__(self):
         self.df = pd.DataFrame(
-            columns=["Amount", "Category", "Description", "Y", "M", "D", "Type"]
+            columns=["ID", "Amount", "Category", "Description", "Y", "M", "D", "Type"]
         )
         self.outcome = self.df[self.df["Type"] == 0]["Amount"].sum()
         self.income = self.df[self.df["Type"] == 1]["Amount"].sum()
@@ -45,12 +46,16 @@ class Wallet:
         if type == 0:
             amount = -amount
 
+        # aumenta di 1 l'indice ID di ogni riga
+        self.df["ID"] = self.df["ID"].apply(lambda x: x + 1)
+
         # non usare append, è lento
         self.df = pd.concat(
             [
                 self.df,
                 pd.DataFrame(
                     {
+                        "ID": [0],
                         "Amount": [amount],
                         "Category": [category],
                         "Description": [description],
@@ -264,7 +269,7 @@ class WalletGUI:
         style.theme_use("clam")
         self.tree = ttk.Treeview(self.root)
 
-        self.img = Image.open("/home/umberto/prog/money/profile_picture.ico")
+        self.img = Image.open("/home/umberto/prog/money/imgs/profile_picture.ico")
         self.img = ImageTk.PhotoImage(self.img)
         self.root.tk.call("wm", "iconphoto", self.root._w, self.img)
 
@@ -317,10 +322,18 @@ class WalletGUI:
         self.default_botton.grid(row=1, column=0)  # Change this line
 
         # ---------------------------BARRA DEI MENU----------------------------
+        self.menu_bar = tk.Menu(self.root)
+        # upload wallet
+        self.upload_menu = tk.Menu(self.menu_bar, tearoff=0)
+        self.menu_bar.add_cascade(label="File", menu=self.upload_menu)
+        self.upload_menu.add_command(label="Carica Wallet", command=self.upload_wallet)
+
+        self.upload_menu.add_command(label="Salva Wallet", command=self.save_wallet)
+
+        self.upload_menu.add_command(label="Nuovo Wallet", command=self.new_wallet)
 
         # GRAFICI
 
-        self.menu_bar = tk.Menu(self.root)
         # Create a new 'Options' menu
         self.options_menu = tk.Menu(self.menu_bar, tearoff=0)
         self.menu_bar.add_cascade(label="Grafici", menu=self.options_menu)
@@ -602,8 +615,22 @@ class WalletGUI:
         self.wallet.add(amount, category, description, year, month, day)
         self.add_expense_window.destroy()
 
-        self.wallet.df.to_csv("wallet.csv", index=False)
+        # self.wallet.df.to_csv("wallet.csv", index=False)
+
+        # ordina per data dalla piu recente alla meno recente
+        self.wallet.df = self.wallet.df.sort_values(
+            by=["Y", "M", "D", "Category", "Amount"], ascending=False
+        )
+        self.reorganize_table()
         self.view_expenses()
+
+    def reorganize_table(self):
+        # ridefinisci ID a seconda della posizione
+        self.wallet.df["ID"] = range(0, len(self.wallet.df))
+        self.wallet.df = self.wallet.df.sort_values(
+            by=["Y", "M", "D", "Category", "Amount"], ascending=False
+        )
+        self.wallet.df = self.wallet.df.reset_index(drop=True)
 
     def view_expenses(self):
         # pulisci la tabella
@@ -701,9 +728,19 @@ class WalletGUI:
 
     def delete_expense_ok(self, row_index):
         self.wallet.delete(row_index)
-        self.wallet.df.to_csv(self.wallet.wallet_path, index=False)
+        # self.wallet.df.to_csv(self.wallet.wallet_path, index=False)
+        self.reorganize_table_del()
+
         self.view_expenses()
         self.delete_window.destroy()
+
+    def reorganize_table_del(self):
+        # ridefinisci ID a seconda della posizione
+        self.wallet.df["ID"] = range(0, len(self.wallet.df))
+        self.wallet.df = self.wallet.df.sort_values(
+            by=["Y", "M", "D", "Category", "Amount"], ascending=False
+        )
+        self.wallet.df = self.wallet.df.reset_index(drop=True)
 
     def plot_static(self):
         expenses = self.expenses_show
@@ -720,6 +757,54 @@ class WalletGUI:
         new_wallet.read_df(expenses)
 
         new_wallet.plot_time()
+
+    def upload_wallet(self):
+        # Apri la finestra di dialogo per selezionare il file
+        file_path = filedialog.askopenfilename()
+
+        # Controlla se l'utente ha selezionato un file
+        if file_path:
+            # Qui puoi caricare il file nel modo che preferisci.
+            # Ad esempio, se è un file CSV, potresti utilizzare pandas per caricarlo in un DataFrame.
+            self.wallet.read_csv(file_path)
+            self.view_expenses()
+
+    def save_wallet(self):
+        # Apri la finestra di dialogo per selezionare la cartella in cui salvare il file
+        folder_path = filedialog.askdirectory()
+
+        # Controlla se l'utente ha selezionato una cartella
+        if folder_path:
+            # Qui puoi salvare il file nel modo che preferisci.
+            # Ad esempio, se è un file CSV, potresti utilizzare pandas per salvarlo.
+            # voglio scegliere anche il nome del file
+            file_name = filedialog.asksaveasfilename(
+                initialdir=folder_path,
+                title="Save as",
+                filetypes=(
+                    ("CSV files", "*.csv"),
+                    ("Excel files", "*.xlsx"),
+                    ("all files", "*.*"),
+                ),
+                defaultextension=".csv",
+            )
+
+            # Controlla l'estensione del file_name
+            _, extension = os.path.splitext(file_name)
+
+            # Se l'estensione è .xlsx, salva il DataFrame in un file Excel
+            if extension == ".xlsx":
+                self.wallet.df.to_excel(file_name, index=False)
+            # Altrimenti, salva il DataFrame in un file CSV
+            else:
+                self.wallet.df.to_csv(file_name, index=False)
+
+    def new_wallet(self):
+        self.wallet = Wallet()
+        self.wallet.df = pd.DataFrame(
+            columns=["ID", "Amount", "Category", "Description", "Y", "M", "D", "Type"]
+        )
+        self.view_expenses()
 
     def run(self):
         self.root.mainloop()
