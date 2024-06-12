@@ -4,7 +4,6 @@ import seaborn as sns
 import tkinter as tk
 from tkinter import ttk, messagebox
 from tkinter import filedialog
-from PIL import Image, ImageTk
 import os
 
 # datatime
@@ -269,10 +268,6 @@ class WalletGUI:
         style.theme_use("clam")
         self.tree = ttk.Treeview(self.root)
 
-        self.img = Image.open("/home/umberto/prog/money/imgs/profile_picture.ico")
-        self.img = ImageTk.PhotoImage(self.img)
-        self.root.tk.call("wm", "iconphoto", self.root._w, self.img)
-
         # tabella temporanea mostrata
         self.expenses_show = self.wallet.df
 
@@ -463,7 +458,7 @@ class WalletGUI:
         self.title.pack()
 
         self.month_label = tk.Label(self.add_windows_range, text="Da:")
-        self.month_label.pack(side=tk.LEFT)
+        self.month_label.pack(side=tk.LEFT, expand=True)
 
         self.month_var_range = tk.StringVar(self.add_windows_range)
         self.month_var_range.set("1")
@@ -482,7 +477,7 @@ class WalletGUI:
         self.year_menu_range.pack(side=tk.LEFT)
 
         self.month_label = tk.Label(self.add_windows_range, text="a:")
-        self.month_label.pack(side=tk.LEFT)
+        self.month_label.pack(side=tk.LEFT, expand=True)
 
         self.month_var_range_end = tk.StringVar(self.add_windows_range)
         self.month_var_range_end.set("1")
@@ -612,7 +607,12 @@ class WalletGUI:
             now = datetime.now()
             year, month, day = now.year, now.month, now.day
 
-        self.wallet.add(amount, category, description, year, month, day)
+        if self.type_var.get() == "income":
+            type = 1
+        else:
+            type = 1
+
+        self.wallet.add(amount, category, description, year, month, day, type)
         self.add_expense_window.destroy()
 
         # self.wallet.df.to_csv("wallet.csv", index=False)
