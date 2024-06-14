@@ -8,7 +8,17 @@ from cycler import cycler
 class Wallet:
     def __init__(self):
         self.df = pd.DataFrame(
-            columns=["ID", "Amount", "Category", "Description", "Y", "M", "D", "Type"]
+            columns=[
+                "ID",
+                "Amount",
+                "Category",
+                "Description",
+                "Y",
+                "M",
+                "D",
+                "Conto",
+                "Type",
+            ]
         )
         self.outcome = self.df[self.df["Type"] == 0]["Amount"].sum()
         self.income = self.df[self.df["Type"] == 1]["Amount"].sum()
@@ -32,6 +42,7 @@ class Wallet:
         y: int,
         m: int,
         d: int,
+        conto: str = "Conto",
         type: bool = 0,
     ):
 
@@ -54,6 +65,7 @@ class Wallet:
                         "Y": [y],
                         "M": [m],
                         "D": [d],
+                        "Conto": [conto],
                         "Type": [type],
                     }
                 ),

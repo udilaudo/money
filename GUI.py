@@ -35,11 +35,19 @@ class WalletGUI:
         self.category_menu, self.month_menu, self.year_menu = (
             self._setup_category_month_year_menus()
         )
+        self.conto_menu = self._setup_conto_menu()
         self.default_botton = self._setup_default_button()
         self.label_frame = self._setup_label_frame()
         self._setup_key_bindings()
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
     # ------------------ GUI SETUP ------------------
+
+    def on_close(self):
+        # Ask the user if they have saved
+        if messagebox.askokcancel("Quit", "Have you saved your work?"):
+            # If the user clicks "OK", destroy the window
+            self.root.destroy()
 
     def _setup_key_bindings(self):
         # comandi da tastiera e mouse
@@ -158,6 +166,16 @@ class WalletGUI:
         )
         category_menu.pack(side=tk.LEFT)
         return category_menu
+
+    def _setup_conto_menu(self):
+        self.conto_label = tk.Label(self.root, text="Conto:")
+        self.conto_label.pack(side=tk.LEFT)
+        self.conto_var_filter = tk.StringVar(self.root)
+        self.conto_var_filter.set("All")
+        conto_options = ["All"] + ["bancoposta", "evolution", "contanti"]
+        conto_menu = tk.OptionMenu(self.root, self.conto_var_filter, *conto_options)
+        conto_menu.pack(side=tk.LEFT)
+        return conto_menu
 
     def _setup_month_menu(self):
         self.month_var = tk.StringVar(self.root)
@@ -324,7 +342,7 @@ class WalletGUI:
         self.add_expense_window.title("Nuova Spesa")
         # set the size of the window
 
-        self.add_expense_window.geometry("300x290")
+        self.add_expense_window.geometry("350x350")
 
         self.amount_label = tk.Label(self.add_expense_window, text="Amount")
         self.amount_label.pack()
@@ -352,6 +370,19 @@ class WalletGUI:
 
         self.date_entry = tk.Entry(self.add_expense_window)
         self.date_entry.pack()
+
+        self.conto_info = tk.Label(self.add_expense_window, text="Con cosa hai pagato?")
+        # sposta un po in basso il label
+
+        self.conto_info.pack()
+
+        self.conto_var = tk.StringVar(value="bancoposta")
+        self.conto_var.set("bancoposta")
+        self.conto_options = ["bancoposta", "evolution", "contanti"]
+        self.conto_menu = tk.OptionMenu(
+            self.add_expense_window, self.conto_var, *self.conto_options
+        )
+        self.conto_menu.pack()
 
         self.type_label = tk.Label(self.add_expense_window, text="Type")
         self.type_label.pack()
@@ -388,6 +419,7 @@ class WalletGUI:
         category = self.category_new_expense.get()
         description = self.description_entry.get()
         date = self.date_entry.get()
+        conto = self.conto_var.get()
         if date:
             year, month, day = map(int, date.split("-"))
         else:
@@ -399,7 +431,7 @@ class WalletGUI:
         else:
             type = 0
 
-        self.wallet.add(amount, category, description, year, month, day, type)
+        self.wallet.add(amount, category, description, year, month, day, conto, type)
         self.add_expense_window.destroy()
 
         # self.wallet.df.to_csv("wallet.csv", index=False)
@@ -449,6 +481,9 @@ class WalletGUI:
         if self.year_var.get() != "All":
             expenses = expenses[expenses["Y"] == int(self.year_var.get())]
 
+        if self.conto_var_filter.get() != "All":
+            expenses = expenses[expenses["Conto"] == self.conto_var_filter.get()]
+
         if expenses.empty:
             messagebox.showinfo("Info", "No expenses found.")
         else:
@@ -462,12 +497,24 @@ class WalletGUI:
             self.tree.tag_configure("income", background="lightgreen")
             # evidenzia le righe di Type 0 di rosso chiarissimo
             # self.tree.tag_configure("expense", background="lightcoral")
+
+            # disegna la tabella senza la colonn Type
+            self.tree["columns"] = list(expenses.columns[:-1])
+            for column in self.tree["columns"]:
+                self.tree.heading(column, text=column)
+
+            # stampa la tabella con la prima colonna piu
+            # Imposta la larghezza della prima colonna
+            first_column = self.tree["columns"][0]
+            self.tree.column(
+                first_column, width=13
+            )  # Modifica il valore 100 per adattarlo alle tue esigenze
+
             for index, row in expenses.iterrows():
-                values = list(row)
                 if row["Type"] == 1:
-                    self.tree.insert("", "end", values=values, tags=("income",))
+                    self.tree.insert("", "end", values=list(row)[:-1], tags="income")
                 else:
-                    self.tree.insert("", "end", values=values, tags=("expense",))
+                    self.tree.insert("", "end", values=list(row)[:-1])
 
         self.expenses_show = expenses
 
@@ -531,7 +578,7 @@ class WalletGUI:
 
         self.edit_expense_window = tk.Toplevel(self.root)
         self.edit_expense_window.title("Modifica Spesa")
-        self.edit_expense_window.geometry("300x290")
+        self.edit_expense_window.geometry("380x350")
 
         self.amount_label = tk.Label(self.edit_expense_window, text="Amount")
         self.amount_label.pack()
@@ -566,6 +613,19 @@ class WalletGUI:
         self.description_entry = tk.Entry(self.edit_expense_window)
         self.description_entry.insert(0, row["Description"])
         self.description_entry.pack()
+
+        self.conto_label = tk.Label(
+            self.edit_expense_window, text="Con cosa hai pagato?"
+        )
+        self.conto_label.pack()
+
+        self.conto_var = tk.StringVar(value=row["Conto"])
+        self.conto_var.set(row["Conto"])
+        self.conto_options = ["bancoposta", "evolution", "contanti"]
+        self.conto_menu = tk.OptionMenu(
+            self.edit_expense_window, self.conto_var, *self.conto_options
+        )
+        self.conto_menu.pack()
 
         self.type_label = tk.Label(self.edit_expense_window, text="Type")
         self.type_label.pack()
@@ -603,6 +663,7 @@ class WalletGUI:
         category = self.category_new_expense.get()
         description = self.description_entry.get()
         date = self.date_entry.get()
+        conto = self.conto_var.get()
         if date:
             year, month, day = map(int, date.split("-"))
         else:
@@ -617,7 +678,7 @@ class WalletGUI:
         selected = self.tree.selection()
         row_index = self.tree.item(selected[0])["values"][0]
         self.wallet.delete(self.wallet.df[self.wallet.df["ID"] == row_index].index[0])
-        self.wallet.add(amount, category, description, year, month, day, type)
+        self.wallet.add(amount, category, description, year, month, day, conto, type)
         self.edit_expense_window.destroy()
 
         # self.wallet.df.to_csv("wallet.csv", index=False)
