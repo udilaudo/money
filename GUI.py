@@ -29,8 +29,7 @@ class WalletGUI:
 
         # setup GUI
         self.root = self._setup_root()
-        # icon = tk.PhotoImage(file="/home/umberto/prog/money/imgs/icona.xbm")
-        # self.root.iconphoto(True, icon)
+        self._set_up_wallet_name()
         self.tree = self._setup_tree()
         self.button_frame = self._setup_buttons()
         self.menu_bar = self._setup_menu_bar()
@@ -63,6 +62,15 @@ class WalletGUI:
         root.geometry("1400x800")
         root.title("Wallet")
         return root
+
+    def _set_up_wallet_name(self):
+        self.wallet_name_label = tk.Label(
+            self.root, text=self.wallet.wallet_name, font=("Helvetica", 16, "bold")
+        )
+        self.wallet_name_label.pack(pady=10)
+
+    def _edit_wallet_name(self):
+        self.wallet_name_label.config(text=self.wallet.wallet_name)
 
     def _setup_tree(self):
         style = ttk.Style()
@@ -127,6 +135,7 @@ class WalletGUI:
         options_menu.add_command(
             label="Torta Categorie", command=self.plot_pie_with_all_categories
         )
+        options_menu.add_command(label="Torta Conto", command=self.plot_pie_conto)
 
     def _add_sort_menu(self, menu_bar):
         sort_menu = tk.Menu(menu_bar, tearoff=0)
@@ -205,8 +214,10 @@ class WalletGUI:
         return default_botton
 
     def _setup_label_frame(self):
-        self.label_frame = tk.LabelFrame(self.root, text="Totals", padx=10, pady=10)
-        self.label_frame.pack(padx=10, pady=10)
+        self.label_frame = tk.LabelFrame(self.root, text="Totals", padx=30, pady=30)
+        self.label_frame.pack(padx=30, pady=30)
+        # canvas = tk.Canvas(self.label_frame, width=200, height=200)
+        # canvas.pack()
         expenses = self.wallet.df
         expenses = self.draw_table(expenses)
         self.write_totals(expenses)
@@ -216,28 +227,33 @@ class WalletGUI:
 
     def on_close(self):
         # Ask the user if they have saved
-        # apri una finestra con "salva" "non salvare" "annulla"
-        self.on_close_window = tk.Toplevel(self.root)
-        self.on_close_window.title("Salva prima di uscire?")
-        self.on_close_window.geometry("300x150")
-        self.on_close_label = tk.Label(
-            self.on_close_window, text="Vuoi salvare prima di uscire?"
-        )
-        self.on_close_label.pack(pady=20)
-        self.yes_button = tk.Button(
-            self.on_close_window, text="Si", command=self.on_close_ok
-        )
-        self.yes_button.pack(side=tk.LEFT, expand=True)
+        # se il titolo della finestra e' "Wallet" allora non ha salvato
+        # se ha salvato il titolo e' "Wallet •"
+        if self.root.title() == "Wallet":
+            self.root.destroy()
+        else:
+            # apri una finestra con "salva" "non salvare" "annulla"
+            self.on_close_window = tk.Toplevel(self.root)
+            self.on_close_window.title("Salva prima di uscire?")
+            self.on_close_window.geometry("300x150")
+            self.on_close_label = tk.Label(
+                self.on_close_window, text="Vuoi salvare prima di uscire?"
+            )
+            self.on_close_label.pack(pady=20)
+            self.yes_button = tk.Button(
+                self.on_close_window, text="Si", command=self.on_close_ok
+            )
+            self.yes_button.pack(side=tk.LEFT, expand=True)
 
-        self.annulla_button = tk.Button(
-            self.on_close_window, text="Annulla", command=self.on_close_undo
-        )
-        self.annulla_button.pack(side=tk.RIGHT, expand=True)
+            self.annulla_button = tk.Button(
+                self.on_close_window, text="Annulla", command=self.on_close_undo
+            )
+            self.annulla_button.pack(side=tk.RIGHT, expand=True)
 
-        self.no_button = tk.Button(
-            self.on_close_window, text="No", command=self.on_close_cancel
-        )
-        self.no_button.pack(side=tk.BOTTOM, expand=True)
+            self.no_button = tk.Button(
+                self.on_close_window, text="No", command=self.on_close_cancel
+            )
+            self.no_button.pack(side=tk.BOTTOM, expand=True)
 
     def on_close_ok(self):
         self.save_wallet_fast()
@@ -255,16 +271,17 @@ class WalletGUI:
         # Add labels to the frame
         self.total_expenses_label = tk.Label(
             self.label_frame,
-            text=f"Totale: {expenses['Amount'].sum()}",
-            fg="red",
+            text=f"Saldo: {expenses['Amount'].sum()}",
+            fg="white",
             font=("Helvetica", 12, "bold"),
+            bg="grey",
         )
         self.total_expenses_label.pack()
 
         self.total_expenses_label_in = tk.Label(
             self.label_frame,
             text=f"Totale Entrate: {expenses[expenses['Type'] == 1]['Amount'].sum()}",
-            font=("Helvetica", 12, "bold"),
+            font=("Helvetica", 18, "bold"),
         )
         self.total_expenses_label_in.pack()
 
@@ -479,6 +496,7 @@ class WalletGUI:
         )
         self.reorganize_table()
         self.view_expenses()
+        self.root.title("Wallet •")
 
     def reorganize_table(self):
         # ridefinisci ID a seconda della posizione
@@ -732,6 +750,7 @@ class WalletGUI:
         )
         self.reorganize_table()
         self.view_expenses()
+        self.root.title("Wallet •")
 
     def delete_expense(self, event=None):
 
@@ -774,6 +793,7 @@ class WalletGUI:
 
         self.view_expenses()
         self.delete_window.destroy()
+        self.root.title("Wallet •")
 
     def reorganize_table_del(self):
         # ridefinisci ID a seconda della posizione
@@ -815,6 +835,14 @@ class WalletGUI:
 
         new_wallet.plot_pie_with_all_categories()
 
+    def plot_pie_conto(self):
+        expenses = self.expenses_show
+
+        new_wallet = Wallet()
+        new_wallet.read_df(expenses)
+
+        new_wallet.plot_pie_conto()
+
     def upload_wallet(self, event=None):
         # Apri la finestra di dialogo per selezionare il file
 
@@ -827,6 +855,7 @@ class WalletGUI:
             # Qui puoi caricare il file nel modo che preferisci.
             # Ad esempio, se è un file CSV, potresti utilizzare pandas per caricarlo in un DataFrame.
             self.wallet.read_csv(file_path)
+            self._edit_wallet_name()
             self.view_expenses()
 
     def save_wallet(self, event=None):
@@ -853,9 +882,18 @@ class WalletGUI:
         else:
             self.wallet.df.to_csv(file_name, index=False)
 
+        self.root.title("Wallet")
+
     def save_wallet_fast(self, event=None):
         # Salva il file in modo veloce
         self.wallet.df.to_csv(self.wallet.wallet_path, index=False)
+        # fai apparire un messaggio di conferma senza finestra visivo
+        self.save_label = tk.Label(
+            self.root, text="Wallet salvato con successo!", bg="lightgreen"
+        )
+        self.save_label.pack()
+        self.save_label.after(2000, self.save_label.destroy)
+        self.root.title("Wallet")
 
     def new_wallet(self, event=None):
         # apri una finestra di dialogo per confermare la creazione di un nuovo wallet

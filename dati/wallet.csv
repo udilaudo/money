@@ -3,4 +3,4 @@ ID,Amount,Category,Description,Y,M,D,Conto,Type
 1,-8.3,Mangiare Fuori,cena andrea,2024,6,12,contanti,0
 2,3269.95,Entrate,saldo conto corrente,2023,12,31,bancoposta,1
 3,95.4,Entrate,saldo evolution,2023,12,31,evolution,1
-4,34.3,Entrate,saldo contanti,2023,12,31,bancoposta,1
+4,34.3,Entrate,saldo contanti,2023,12,31,contanti,1

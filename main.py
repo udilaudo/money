@@ -18,7 +18,7 @@ df = df[df["M"] == int(now.month)]
 df = df[df["Y"] == int(now.year)]
 
 df = df.reset_index(drop=True)
-w = Wallet()
+# w = Wallet()
 # w.read_df(df)
 # w.plot()
 # w.plot_time()

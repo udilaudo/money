@@ -5,3 +5,4 @@ build/
 imgs/
 # ignora i file notebook
 *.ipynb
+*.spec

@@ -33,6 +33,7 @@ class Wallet:
             self.df[self.df["Y"] == self.df["Y"].max()]["M"].max(),
         )
         self.wallet_path = ""
+        self.wallet_name = ""
 
     def add(
         self,
@@ -159,6 +160,7 @@ class Wallet:
             self.df[self.df["Y"] == self.df["Y"].max()]["M"].max(),
         )
         self.wallet_path = path
+        self.wallet_name = path.split("/")[-1]
 
     def read_excel(self, path):
         self.df = pd.read_excel(path)
@@ -175,6 +177,7 @@ class Wallet:
             self.df[self.df["Y"] == self.df["Y"].max()]["M"].max(),
         )
         self.wallet_path = path
+        self.wallet_name = path.split("/")[-1]
 
     def read_df(self, df):
         self.df = df
@@ -348,6 +351,30 @@ class Wallet:
         )
         plt.title("Spese per Categorie")
         plt.savefig("./plots/category_pie_plot.png")
+        plt.show()
+
+    def plot_pie_conto(self):
+        # plotta un grafico a torta con tutte le categorie diverse di spese
+        temp_df = self.df.copy()
+        temp_df["Amount"] = temp_df["Amount"].abs()
+        temp_df = temp_df.groupby("Conto")["Amount"].sum().reset_index()
+
+        color_cycler = cycler(color=plt.get_cmap("tab10").colors)
+        colors = [
+            "green" if category == "Entrate" else color_cycler.by_key()["color"][i % 10]
+            for i, category in enumerate(temp_df["Conto"])
+        ]
+
+        plt.figure(figsize=(10, 6))
+        plt.pie(
+            temp_df["Amount"],
+            labels=temp_df["Conto"],
+            autopct="%1.1f%%",
+            startangle=140,
+            colors=colors,  # Usa la lista di colori
+        )
+        plt.title("Spese per Conto")
+        plt.savefig("./plots/conto_pie_plot.png")
         plt.show()
 
     def __repr__(self) -> str:
