@@ -1,0 +1,786 @@
+import pandas as pd
+import tkinter as tk
+from tkinter import ttk, messagebox
+from tkinter import filedialog
+import os
+from datetime import datetime
+
+
+class WalletGUI:
+    def __init__(self, wallet):
+        self.wallet = wallet
+        self.categories_list = [
+            "Spesa",
+            "Sport",
+            "Mangiare Fuori",
+            "Auto",
+            "Casa",
+            "Bollette",
+            "Altro",
+            "Entrate",
+        ]
+
+        # setup GUI
+        self.root = self._setup_root()
+        self.tree = self._setup_tree()
+        self.button_frame = self._setup_buttons()
+        self.menu_bar = self._setup_menu_bar()
+        self.category_menu, self.month_menu, self.year_menu = (
+            self._setup_category_month_year_menus()
+        )
+        self.default_botton = self._setup_default_button()
+        self.label_frame = self._setup_label_frame()
+
+        # comandi da tastiera e mouse
+        self.root.bind("<Delete>", self.delete_expense)
+        self.root.bind("<Return>", self.show_info_enter)
+        self.tree.bind("<Double-1>", self.show_info_enter)
+        self.root.bind("<Control-s>", self.save_wallet)
+        self.root.bind("<Control-o>", self.upload_wallet)
+        self.root.bind("<Control-n>", self.new_wallet)
+        self.root.bind("<Control-a>", self.add_expense)
+        # col tasto destro del mouse apri il menu contestuale
+        self.tree.bind("<Button-3>", self.show_popup_menu)
+
+    def _setup_root(self):
+        root = tk.Tk()
+        root.configure(bg="lightgrey")
+        root.geometry("1600x800")
+        root.title("Wallet")
+        return root
+
+    def _setup_tree(self):
+        style = ttk.Style()
+        style.theme_use("clam")
+        tree = ttk.Treeview(self.root)
+        tree["columns"] = list(self.wallet.df.columns)
+        tree["show"] = "headings"
+        for column in tree["columns"]:
+            tree.heading(column, text=column)
+            tree.column(column, width=100)
+        tree.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        return tree
+
+    def _setup_buttons(self):
+        button_frame = tk.Frame(self.root)
+        button_frame.pack()
+        self._add_buttons_to_frame(button_frame)
+        return button_frame
+
+    def _add_buttons_to_frame(self, frame):
+        buttons = [
+            ("Nuova Spesa", self.add_expense, "lightblue", 0, 0),
+            ("Visualizza Spese", self.view_expenses, None, 1, 1),
+            ("Cancella Spesa", self.delete_expense, "pink", 0, 1),
+            ("Visualizza tutto", self.default_view, None, 1, 0),
+        ]
+        for text, command, bg, row, column in buttons:
+            button = tk.Button(frame, text=text, command=command, bg=bg)
+            button.grid(row=row, column=column)
+
+    def _setup_menu_bar(self):
+        menu_bar = tk.Menu(self.root)
+        self._add_menus_to_menu_bar(menu_bar)
+        self.root.config(menu=menu_bar)
+        return menu_bar
+
+    def _add_menus_to_menu_bar(self, menu_bar):
+        self._add_upload_menu(menu_bar)
+        self._add_options_menu(menu_bar)
+        self._add_sort_menu(menu_bar)
+        self._add_time_menu(menu_bar)
+
+    def _add_upload_menu(self, menu_bar):
+        upload_menu = tk.Menu(menu_bar, tearoff=0)
+        menu_bar.add_cascade(label="File", menu=upload_menu)
+        upload_menu.add_command(
+            label="Carica Wallet   (ctrl+O)", command=self.upload_wallet
+        )
+        upload_menu.add_command(
+            label="Salva Wallet    (ctrl+S)", command=self.save_wallet
+        )
+        upload_menu.add_command(
+            label="Nuovo Wallet    (ctrl+N)", command=self.new_wallet
+        )
+
+    def _add_options_menu(self, menu_bar):
+        options_menu = tk.Menu(menu_bar, tearoff=0)
+        menu_bar.add_cascade(label="Grafici", menu=options_menu)
+        options_menu.add_command(label="Categorie a Barre", command=self.plot_static)
+        options_menu.add_command(label="Temporale a Barre", command=self.plot_time)
+        options_menu.add_command(label="Torta in-out", command=self.plot_pie)
+        options_menu.add_command(
+            label="Torta Categorie", command=self.plot_pie_with_all_categories
+        )
+
+    def _add_sort_menu(self, menu_bar):
+        sort_menu = tk.Menu(menu_bar, tearoff=0)
+        menu_bar.add_cascade(label="Ordina per ...", menu=sort_menu)
+        sort_menu.add_command(
+            label="Categoria", command=lambda: self.sort_values_gui("Category")
+        )
+        sort_menu.add_command(
+            label="Importo", command=lambda: self.sort_values_gui("Amount")
+        )
+
+    def _add_time_menu(self, menu_bar):
+        time_menu = tk.Menu(menu_bar, tearoff=0)
+        menu_bar.add_cascade(label="Range Temporale", menu=time_menu)
+        time_menu.add_command(
+            label="Seleziona range", command=lambda: self.select_time()
+        )
+
+    def _setup_category_month_year_menus(self):
+        category_menu = self._setup_category_menu()
+        month_menu = self._setup_month_menu()
+        year_menu = self._setup_year_menu()
+        return category_menu, month_menu, year_menu
+
+    def _setup_category_menu(self):
+        self.category_label = tk.Label(self.root, text="Category:")
+        self.category_label.pack(side=tk.LEFT)
+        self.category_var_filter = tk.StringVar(self.root)
+        self.category_var_filter.set("All")
+        category_options = ["All"] + self.categories_list + ["Uscite"]
+        category_menu = tk.OptionMenu(
+            self.root, self.category_var_filter, *category_options
+        )
+        category_menu.pack(side=tk.LEFT)
+        return category_menu
+
+    def _setup_month_menu(self):
+        self.month_var = tk.StringVar(self.root)
+        self.month_var.set(datetime.now().month)
+        month_options = ["All"] + list(range(1, 13))
+        month_menu = tk.OptionMenu(self.root, self.month_var, *month_options)
+        month_menu.pack(side=tk.RIGHT)
+        month_label = tk.Label(self.root, text="Month:")
+        month_label.pack(side=tk.RIGHT)
+        return month_menu
+
+    def _setup_year_menu(self):
+        self.year_var = tk.StringVar(self.root)
+        self.year_var.set(datetime.now().year)
+        year_options = ["All"] + list(self.wallet.df["Y"].unique())
+        year_menu = tk.OptionMenu(self.root, self.year_var, *year_options)
+        year_menu.pack(side=tk.RIGHT)
+        year_label = tk.Label(self.root, text="Year:")
+        year_label.pack(side=tk.RIGHT)
+        return year_menu
+
+    def _setup_default_button(self):
+        default_botton = tk.Button(
+            self.root, text="Mese corrente", command=self.corrent_month_view
+        )
+        default_botton.pack(side=tk.RIGHT)
+        return default_botton
+
+    def _setup_label_frame(self):
+        self.label_frame = tk.LabelFrame(self.root, text="Totals", padx=10, pady=10)
+        self.label_frame.pack(padx=10, pady=10)
+        expenses = self.wallet.df
+        expenses = self.draw_table(expenses)
+        self.write_totals(expenses)
+        return self.label_frame
+
+    def write_totals(self, expenses):
+        # Add labels to the frame
+        self.total_expenses_label = tk.Label(
+            self.label_frame,
+            text=f"Totale: {expenses['Amount'].sum()}",
+            fg="red",
+            font=("Helvetica", 12, "bold"),
+        )
+        self.total_expenses_label.pack()
+
+        self.total_expenses_label_in = tk.Label(
+            self.label_frame,
+            text=f"Totale Entrate: {expenses[expenses['Type'] == 1]['Amount'].sum()}",
+            font=("Helvetica", 12, "bold"),
+        )
+        self.total_expenses_label_in.pack()
+
+        self.total_expenses_label_out = tk.Label(
+            self.label_frame,
+            text=f"Totale Uscite: {expenses[expenses['Type'] == 0]['Amount'].sum()}",
+            font=("Helvetica", 12, "bold"),
+        )
+        self.total_expenses_label_out.pack()
+
+        self.total_len = tk.Label(
+            self.label_frame,
+            text=f"Numero di spese: {len(expenses)}",
+            font=("Helvetica", 12, "bold"),
+        )
+        self.total_len.pack()
+
+    def select_time(self):
+        self.add_windows_range = tk.Toplevel(self.root)
+        self.add_windows_range.title("Seleziona Range Temporale")
+        self.add_windows_range.geometry("400x200")
+
+        self.title = tk.Label(
+            self.add_windows_range, text="Seleziona il range temporale che preferisci:"
+        )
+        self.title.pack()
+
+        self.month_label = tk.Label(self.add_windows_range, text="Da:")
+        self.month_label.pack(side=tk.LEFT, expand=True)
+
+        self.month_var_range = tk.StringVar(self.add_windows_range)
+        self.month_var_range.set("1")
+        self.month_options = list(range(1, 13))
+        self.month_menu_range = tk.OptionMenu(
+            self.add_windows_range, self.month_var_range, *self.month_options
+        )
+        self.month_menu_range.pack(side=tk.LEFT)
+
+        self.year_var_range = tk.StringVar(self.add_windows_range)
+        self.year_var_range.set("2024")
+        self.year_options = list(range(2020, 2025))
+        self.year_menu_range = tk.OptionMenu(
+            self.add_windows_range, self.year_var_range, *self.year_options
+        )
+        self.year_menu_range.pack(side=tk.LEFT)
+
+        self.month_label = tk.Label(self.add_windows_range, text="a:")
+        self.month_label.pack(side=tk.LEFT, expand=True)
+
+        self.month_var_range_end = tk.StringVar(self.add_windows_range)
+        self.month_var_range_end.set("1")
+        self.month_options = list(range(1, 13))
+        self.month_menu_range_end = tk.OptionMenu(
+            self.add_windows_range, self.month_var_range_end, *self.month_options
+        )
+        self.month_menu_range_end.pack(side=tk.LEFT)
+
+        self.year_var_range_end = tk.StringVar(self.add_windows_range)
+        self.year_var_range_end.set("2024")
+        self.year_options = list(range(2020, 2025))
+        self.year_menu_range_end = tk.OptionMenu(
+            self.add_windows_range, self.year_var_range_end, *self.year_options
+        )
+        self.year_menu_range_end.pack(side=tk.LEFT)
+
+        self.ok_button = tk.Button(
+            self.add_windows_range, text="Filtra", command=self.filter_time
+        )
+        self.ok_button.configure(bg="lightgreen")
+        self.ok_button.pack(side=tk.BOTTOM)
+
+    def filter_time(self):
+        self.add_windows_range.destroy()
+        self.month_var.set("All")
+        self.year_var.set("All")
+
+        # pulisci la tabella
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
+        expenses = self.wallet.df
+        # filtra per range temporale
+        # Crea una nuova colonna "Date" che combina "Y" e "M"
+        expenses["Date"] = pd.to_datetime(
+            expenses["Y"].astype(str) + "-" + expenses["M"].astype(str)
+        )
+
+        # Ottieni le date di inizio e fine dal range
+        start_date = pd.to_datetime(
+            str(self.year_var_range.get()) + "-" + str(self.month_var_range.get())
+        )
+        end_date = pd.to_datetime(
+            str(self.year_var_range_end.get())
+            + "-"
+            + str(self.month_var_range_end.get())
+        )
+
+        # Filtra il DataFrame per le date nel range
+        expenses = expenses[
+            (expenses["Date"] >= start_date) & (expenses["Date"] <= end_date)
+        ]
+
+        expenses = self.draw_table(expenses)
+        # cancella il vecchio label e aggiungi il nuovo
+        for widget in self.label_frame.winfo_children():
+            widget.destroy()
+
+        self.write_totals(expenses)
+
+    def add_expense(self, event=None):
+        self.add_expense_window = tk.Toplevel(self.root)
+        self.add_expense_window.title("Nuova Spesa")
+        # set the size of the window
+
+        self.add_expense_window.geometry("300x290")
+
+        self.amount_label = tk.Label(self.add_expense_window, text="Amount")
+        self.amount_label.pack()
+        self.amount_entry = tk.Entry(self.add_expense_window)
+        self.amount_entry.pack()
+
+        self.category_label = tk.Label(self.add_expense_window, text="Category")
+        self.category_label.pack()
+
+        self.category_new_expense = tk.StringVar(self.add_expense_window)
+        self.category_new_expense.set("Spesa")  # default value
+        self.category_options = self.categories_list
+        self.category_menu = tk.OptionMenu(
+            self.add_expense_window, self.category_new_expense, *self.category_options
+        )
+        self.category_menu.pack()
+
+        self.description_label = tk.Label(self.add_expense_window, text="Description *")
+        self.description_label.pack()
+        self.description_entry = tk.Entry(self.add_expense_window)
+        self.description_entry.pack()
+
+        self.date_label = tk.Label(self.add_expense_window, text="Date (YYYY-MM-DD) *")
+        self.date_label.pack()
+
+        self.date_entry = tk.Entry(self.add_expense_window)
+        self.date_entry.pack()
+
+        self.type_label = tk.Label(self.add_expense_window, text="Type")
+        self.type_label.pack()
+
+        self.type_var = tk.StringVar(value="expense")
+        self.expense_radiobutton = tk.Radiobutton(
+            self.add_expense_window,
+            text="In uscita",
+            variable=self.type_var,
+            value="expense",
+        )
+        self.expense_radiobutton.pack()
+        self.income_radiobutton = tk.Radiobutton(
+            self.add_expense_window,
+            text="In entrata",
+            variable=self.type_var,
+            value="income",
+        )
+        self.income_radiobutton.pack()
+
+        self.information = tk.Label(self.add_expense_window, text="* opzionale")
+        # sposta un po in basso il label
+
+        self.information.pack(pady=10)
+
+        self.submit_button = tk.Button(
+            self.add_expense_window, text="Aggiungi", command=self.submit_expense
+        )
+        self.submit_button.configure(bg="lightgreen")
+        self.submit_button.pack(side=tk.BOTTOM)
+
+    def submit_expense(self):
+        amount = float(self.amount_entry.get())
+        category = self.category_new_expense.get()
+        description = self.description_entry.get()
+        date = self.date_entry.get()
+        if date:
+            year, month, day = map(int, date.split("-"))
+        else:
+            now = datetime.now()
+            year, month, day = now.year, now.month, now.day
+
+        if self.type_var.get() == "income":
+            type = 1
+        else:
+            type = 0
+
+        self.wallet.add(amount, category, description, year, month, day, type)
+        self.add_expense_window.destroy()
+
+        # self.wallet.df.to_csv("wallet.csv", index=False)
+
+        # ordina per data dalla piu recente alla meno recente
+        self.wallet.df = self.wallet.df.sort_values(
+            by=["Y", "M", "D", "Category", "Amount"], ascending=False
+        )
+        self.reorganize_table()
+        self.view_expenses()
+
+    def reorganize_table(self):
+        # ridefinisci ID a seconda della posizione
+        self.wallet.df["ID"] = range(0, len(self.wallet.df))
+        self.wallet.df = self.wallet.df.sort_values(
+            by=["Y", "M", "D", "Category", "Amount"], ascending=False
+        )
+        self.wallet.df = self.wallet.df.reset_index(drop=True)
+
+    def view_expenses(self):
+        # pulisci la tabella
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
+        expenses = self.wallet.df
+
+        expenses = self.draw_table(expenses)
+
+        # cancella il vecchio label e aggiungi il nuovo
+        for widget in self.label_frame.winfo_children():
+            widget.destroy()
+
+        self.write_totals(expenses)
+
+    def draw_table(self, expenses):
+
+        if self.category_var_filter.get() == "Entrate":
+            expenses = expenses[expenses["Type"] == 1]
+        elif self.category_var_filter.get() == "Uscite":
+            expenses = expenses[expenses["Type"] == 0]
+        elif self.category_var_filter.get() != "All":
+            expenses = expenses[expenses["Category"] == self.category_var_filter.get()]
+
+        if self.month_var.get() != "All":
+            expenses = expenses[expenses["M"] == int(self.month_var.get())]
+
+        if self.year_var.get() != "All":
+            expenses = expenses[expenses["Y"] == int(self.year_var.get())]
+
+        if expenses.empty:
+            messagebox.showinfo("Info", "No expenses found.")
+        else:
+            """self.tree["columns"] = list(expenses.columns)
+            for column in self.tree["columns"]:
+                self.tree.heading(column, text=column)
+
+            for index, row in expenses.iterrows():
+                self.tree.insert("", "end", values=list(row))"""
+            # evidenzia le righe di Type 1 di verde chiarissimo
+            self.tree.tag_configure("income", background="lightgreen")
+            # evidenzia le righe di Type 0 di rosso chiarissimo
+            # self.tree.tag_configure("expense", background="lightcoral")
+            for index, row in expenses.iterrows():
+                values = list(row)
+                if row["Type"] == 1:
+                    self.tree.insert("", "end", values=values, tags=("income",))
+                else:
+                    self.tree.insert("", "end", values=values, tags=("expense",))
+
+        self.expenses_show = expenses
+
+        return expenses
+
+    def default_view(self):
+        self.month_var.set("All")
+        self.year_var.set("All")
+        self.view_expenses()
+
+    def corrent_month_view(self):
+        now = datetime.now()
+        self.month_var.set(now.month)
+        self.year_var.set(now.year)
+        self.view_expenses()
+
+    def sort_values_gui(self, column):
+
+        # pulisci la tabella
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
+        expenses = self.wallet.df
+        new_wallet = Wallet()
+        new_wallet.read_df(expenses)
+        new_wallet.sort_values_class(column, ascending=False)
+
+        expenses = new_wallet.df
+
+        expenses = self.draw_table(expenses)
+
+    def show_info_enter(self, event=None):
+        # apri una finestra con le informazioni della riga selezionata
+        selected = self.tree.selection()
+        if not selected:
+            messagebox.showerror("Errore", "Nessuna riga selezionata")
+            return
+        row_index = self.tree.item(selected[0])["values"][0]
+        row = self.wallet.df.iloc[row_index]
+        messagebox.showinfo(
+            "Info",
+            f"Amount: {row['Amount']}\nCategory: {row['Category']}\nDescription: {row['Description']}\nDate: {row['Y']}-{row['M']}-{row['D']}",
+        )
+
+    def show_popup_menu(self, event):
+        # crea un menu contestuale
+        popup = tk.Menu(self.root, tearoff=0)
+        popup.add_command(label="Info", command=self.show_info_enter)
+        popup.add_command(label="Modifica", command=self.edit_expense)
+        popup.add_command(label="Cancella", command=self.delete_expense)
+        popup.tk_popup(event.x_root, event.y_root)
+
+    def edit_expense(self):
+        # apri una finestra per modificare la spesa
+        selected = self.tree.selection()
+        if not selected:
+            messagebox.showerror("Errore", "Nessuna riga selezionata")
+            return
+        row_index = self.tree.item(selected[0])["values"][0]
+        row = self.wallet.df.iloc[row_index]
+
+        self.edit_expense_window = tk.Toplevel(self.root)
+        self.edit_expense_window.title("Modifica Spesa")
+        self.edit_expense_window.geometry("300x290")
+
+        self.amount_label = tk.Label(self.edit_expense_window, text="Amount")
+        self.amount_label.pack()
+        self.amount_entry = tk.Entry(self.edit_expense_window)
+        self.amount_entry.insert(
+            0, -row["Amount"] if row["Type"] == 0 else row["Amount"]
+        )
+        self.amount_entry.pack()
+
+        self.category_label = tk.Label(self.edit_expense_window, text="Category")
+        self.category_label.pack()
+
+        self.category_new_expense = tk.StringVar(self.edit_expense_window)
+        self.category_new_expense.set(row["Category"])
+
+        self.category_options = self.categories_list
+        self.category_menu = tk.OptionMenu(
+            self.edit_expense_window, self.category_new_expense, *self.category_options
+        )
+        self.category_menu.pack()
+
+        self.date_label = tk.Label(self.edit_expense_window, text="Date (YYYY-MM-DD)")
+        self.date_label.pack()
+
+        self.date_entry = tk.Entry(self.edit_expense_window)
+        self.date_entry.insert(0, f"{row['Y']}-{row['M']}-{row['D']}")
+        self.date_entry.pack()
+
+        self.description_label = tk.Label(self.edit_expense_window, text="Description")
+        self.description_label.pack()
+
+        self.description_entry = tk.Entry(self.edit_expense_window)
+        self.description_entry.insert(0, row["Description"])
+        self.description_entry.pack()
+
+        self.type_label = tk.Label(self.edit_expense_window, text="Type")
+        self.type_label.pack()
+
+        self.type_var = tk.StringVar(value="income" if row["Type"] == 1 else "expense")
+        self.expense_radiobutton = tk.Radiobutton(
+            self.edit_expense_window,
+            text="In uscita",
+            variable=self.type_var,
+            value="expense",
+        )
+        self.expense_radiobutton.pack()
+        self.income_radiobutton = tk.Radiobutton(
+            self.edit_expense_window,
+            text="In entrata",
+            variable=self.type_var,
+            value="income",
+        )
+        self.income_radiobutton.pack()
+
+        self.information = tk.Label(self.edit_expense_window, text="* opzionale")
+        # sposta un po in basso il label
+
+        self.information.pack(pady=10)
+
+        self.submit_button = tk.Button(
+            self.edit_expense_window, text="Modifica", command=self.submit_edit
+        )
+        # colora di arancione chiaro
+        self.submit_button.configure(bg="lightblue")
+        self.submit_button.pack()
+
+    def submit_edit(self):
+        amount = float(self.amount_entry.get())
+        category = self.category_new_expense.get()
+        description = self.description_entry.get()
+        date = self.date_entry.get()
+        if date:
+            year, month, day = map(int, date.split("-"))
+        else:
+            now = datetime.now()
+            year, month, day = now.year, now.month, now.day
+
+        if self.type_var.get() == "income":
+            type = 1
+        else:
+            type = 0
+
+        selected = self.tree.selection()
+        row_index = self.tree.item(selected[0])["values"][0]
+        self.wallet.delete(self.wallet.df[self.wallet.df["ID"] == row_index].index[0])
+        self.wallet.add(amount, category, description, year, month, day, type)
+        self.edit_expense_window.destroy()
+
+        # self.wallet.df.to_csv("wallet.csv", index=False)
+
+        # ordina per data dalla piu recente alla meno recente
+        self.wallet.df = self.wallet.df.sort_values(
+            by=["Y", "M", "D", "Category", "Amount"], ascending=False
+        )
+        self.reorganize_table()
+        self.view_expenses()
+
+    def delete_expense(self, event=None):
+
+        # prendi il numero della riga selezionata
+        selected = self.tree.selection()
+
+        # open a dialog box to confirm the deletion
+        if not selected:
+            messagebox.showerror("Errore", "Nessuna riga selezionata")
+            return
+
+        row_index = self.tree.item(selected[0])["values"][0]
+        self.delete_window = tk.Toplevel(self.root)
+        self.delete_window.title("Cancella la spesa")
+        self.delete_window.geometry("300x150")
+        self.delete_label = tk.Label(
+            self.delete_window, text="Sei sicuro di voler cancellare la spesa?"
+        )
+        self.delete_label.pack(pady=20)
+        self.yes_button = tk.Button(
+            self.delete_window,
+            text="Si",
+            command=lambda: self.delete_expense_ok(row_index=row_index),
+        )
+        self.yes_button.configure(bg="lightgreen")
+        self.yes_button.pack(side=tk.LEFT, expand=True)
+        self.no_button = tk.Button(
+            self.delete_window, text="No", command=self.delete_expense_cancel
+        )
+        self.no_button.configure(bg="pink")
+        self.no_button.pack(side=tk.RIGHT, expand=True)
+
+    def delete_expense_cancel(self):
+        self.delete_window.destroy()
+
+    def delete_expense_ok(self, row_index):
+        self.wallet.delete(row_index)
+        # self.wallet.df.to_csv(self.wallet.wallet_path, index=False)
+        self.reorganize_table_del()
+
+        self.view_expenses()
+        self.delete_window.destroy()
+
+    def reorganize_table_del(self):
+        # ridefinisci ID a seconda della posizione
+        self.wallet.df["ID"] = range(0, len(self.wallet.df))
+        self.wallet.df = self.wallet.df.sort_values(
+            by=["Y", "M", "D", "Category", "Amount"], ascending=False
+        )
+        self.wallet.df = self.wallet.df.reset_index(drop=True)
+
+    def plot_static(self):
+        expenses = self.expenses_show
+
+        new_wallet = Wallet()
+        new_wallet.read_df(expenses)
+
+        new_wallet.plot()
+
+    def plot_time(self):
+        expenses = self.expenses_show
+
+        new_wallet = Wallet()
+        new_wallet.read_df(expenses)
+
+        new_wallet.plot_time()
+
+    def plot_pie(self):
+        expenses = self.expenses_show
+
+        new_wallet = Wallet()
+        new_wallet.read_df(expenses)
+
+        new_wallet.plot_pie()
+
+    def plot_pie_with_all_categories(self):
+        expenses = self.expenses_show
+
+        new_wallet = Wallet()
+        new_wallet.read_df(expenses)
+
+        new_wallet.plot_pie_with_all_categories()
+
+    def upload_wallet(self, event=None):
+        # Apri la finestra di dialogo per selezionare il file
+
+        # apri la finestra a un path di default nella cartella dati
+        path_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "dati")
+        file_path = filedialog.askopenfilename(initialdir=path_dir)
+
+        # Controlla se l'utente ha selezionato un file
+        if file_path:
+            # Qui puoi caricare il file nel modo che preferisci.
+            # Ad esempio, se è un file CSV, potresti utilizzare pandas per caricarlo in un DataFrame.
+            self.wallet.read_csv(file_path)
+            self.view_expenses()
+
+    def save_wallet(self, event=None):
+        # Apri la finestra di dialogo per selezionare la cartella in cui salvare il file
+        folder_path = filedialog.askdirectory()
+
+        # Controlla se l'utente ha selezionato una cartella
+        if folder_path:
+            # Qui puoi salvare il file nel modo che preferisci.
+            # Ad esempio, se è un file CSV, potresti utilizzare pandas per salvarlo.
+            # voglio scegliere anche il nome del file
+            file_name = filedialog.asksaveasfilename(
+                initialdir=folder_path,
+                title="Save as",
+                filetypes=(
+                    ("CSV files", "*.csv"),
+                    ("Excel files", "*.xlsx"),
+                    ("all files", "*.*"),
+                ),
+                defaultextension=".csv",
+            )
+
+            # Controlla l'estensione del file_name
+            _, extension = os.path.splitext(file_name)
+
+            # Se l'estensione è .xlsx, salva il DataFrame in un file Excel
+            if extension == ".xlsx":
+                self.wallet.df.to_excel(file_name, index=False)
+            # Altrimenti, salva il DataFrame in un file CSV
+            else:
+                self.wallet.df.to_csv(file_name, index=False)
+
+    def new_wallet(self, event=None):
+        # apri una finestra di dialogo per confermare la creazione di un nuovo wallet
+        self.new_wallet_window = tk.Toplevel(self.root)
+        self.new_wallet_window.title("Nuovo Wallet?")
+
+        # aggiungi una informazione
+        self.new_wallet_label = tk.Label(
+            self.new_wallet_window,
+            text="Vuoi creare un nuovo wallet?",
+        )
+        self.new_wallet_label.pack(pady=20)
+        self.new_wallet_label = tk.Label(
+            self.new_wallet_window,
+            text="Tutti i dati non salvati verranno persi.",
+        )
+        self.new_wallet_label.pack()
+
+        self.new_wallet_window.geometry("300x200")
+        self.yes_button = tk.Button(
+            self.new_wallet_window, text="Si", command=self.new_wallet_ok
+        )
+        self.yes_button.configure(bg="lightgreen")
+        self.yes_button.pack(side=tk.LEFT, expand=True)
+        self.no_button = tk.Button(
+            self.new_wallet_window, text="No", command=self.new_wallet_cancel
+        )
+        self.no_button.configure(bg="pink")
+        self.no_button.pack(side=tk.RIGHT, expand=True)
+
+    def new_wallet_ok(self):
+        self.wallet = Wallet()
+        self.wallet.df = pd.DataFrame(
+            columns=["ID", "Amount", "Category", "Description", "Y", "M", "D", "Type"]
+        )
+        self.view_expenses()
+        self.new_wallet_window.destroy()
+
+    def new_wallet_cancel(self):
+        self.new_wallet_window.destroy()
+
+    def run(self):
+        self.root.mainloop()
