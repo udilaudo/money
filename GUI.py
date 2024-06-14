@@ -29,6 +29,8 @@ class WalletGUI:
 
         # setup GUI
         self.root = self._setup_root()
+        # icon = tk.PhotoImage(file="/home/umberto/prog/money/imgs/icona.xbm")
+        # self.root.iconphoto(True, icon)
         self.tree = self._setup_tree()
         self.button_frame = self._setup_buttons()
         self.menu_bar = self._setup_menu_bar()
@@ -43,18 +45,12 @@ class WalletGUI:
 
     # ------------------ GUI SETUP ------------------
 
-    def on_close(self):
-        # Ask the user if they have saved
-        if messagebox.askokcancel("Quit", "Have you saved your work?"):
-            # If the user clicks "OK", destroy the window
-            self.root.destroy()
-
     def _setup_key_bindings(self):
         # comandi da tastiera e mouse
         self.root.bind("<Delete>", self.delete_expense)
         self.root.bind("<Return>", self.show_info_enter)
         self.tree.bind("<Double-1>", self.show_info_enter)
-        self.root.bind("<Control-s>", self.save_wallet)
+        self.root.bind("<Control-s>", self.save_wallet_fast)
         self.root.bind("<Control-o>", self.upload_wallet)
         self.root.bind("<Control-n>", self.new_wallet)
         self.root.bind("<Control-a>", self.add_expense)
@@ -64,7 +60,7 @@ class WalletGUI:
     def _setup_root(self):
         root = tk.Tk()
         root.configure(bg="lightgrey")
-        root.geometry("1600x800")
+        root.geometry("1400x800")
         root.title("Wallet")
         return root
 
@@ -89,9 +85,9 @@ class WalletGUI:
     def _add_buttons_to_frame(self, frame):
         buttons = [
             ("Nuova Spesa", self.add_expense, "lightblue", 0, 0),
-            ("Visualizza Spese", self.view_expenses, None, 1, 1),
+            ("Default Tempo", self.default_view_time, None, 1, 1),
             ("Cancella Spesa", self.delete_expense, "pink", 0, 1),
-            ("Visualizza tutto", self.default_view, None, 1, 0),
+            ("Default Categorie", self.default_view, None, 1, 0),
         ]
         for text, command, bg, row, column in buttons:
             button = tk.Button(frame, text=text, command=command, bg=bg)
@@ -164,6 +160,7 @@ class WalletGUI:
         category_menu = tk.OptionMenu(
             self.root, self.category_var_filter, *category_options
         )
+        self.category_var_filter.trace("w", self.view_expenses)
         category_menu.pack(side=tk.LEFT)
         return category_menu
 
@@ -174,6 +171,7 @@ class WalletGUI:
         self.conto_var_filter.set("All")
         conto_options = ["All"] + ["bancoposta", "evolution", "contanti"]
         conto_menu = tk.OptionMenu(self.root, self.conto_var_filter, *conto_options)
+        self.conto_var_filter.trace("w", self.view_expenses)
         conto_menu.pack(side=tk.LEFT)
         return conto_menu
 
@@ -182,6 +180,7 @@ class WalletGUI:
         self.month_var.set(datetime.now().month)
         month_options = ["All"] + list(range(1, 13))
         month_menu = tk.OptionMenu(self.root, self.month_var, *month_options)
+        self.month_var.trace("w", self.view_expenses)
         month_menu.pack(side=tk.RIGHT)
         month_label = tk.Label(self.root, text="Month:")
         month_label.pack(side=tk.RIGHT)
@@ -192,6 +191,7 @@ class WalletGUI:
         self.year_var.set(datetime.now().year)
         year_options = ["All"] + list(self.wallet.df["Y"].unique())
         year_menu = tk.OptionMenu(self.root, self.year_var, *year_options)
+        self.year_var.trace("w", self.view_expenses)
         year_menu.pack(side=tk.RIGHT)
         year_label = tk.Label(self.root, text="Year:")
         year_label.pack(side=tk.RIGHT)
@@ -213,6 +213,43 @@ class WalletGUI:
         return self.label_frame
 
     # ------------------ GUI FUNCTIONALITY ------------------
+
+    def on_close(self):
+        # Ask the user if they have saved
+        # apri una finestra con "salva" "non salvare" "annulla"
+        self.on_close_window = tk.Toplevel(self.root)
+        self.on_close_window.title("Salva prima di uscire?")
+        self.on_close_window.geometry("300x150")
+        self.on_close_label = tk.Label(
+            self.on_close_window, text="Vuoi salvare prima di uscire?"
+        )
+        self.on_close_label.pack(pady=20)
+        self.yes_button = tk.Button(
+            self.on_close_window, text="Si", command=self.on_close_ok
+        )
+        self.yes_button.pack(side=tk.LEFT, expand=True)
+
+        self.annulla_button = tk.Button(
+            self.on_close_window, text="Annulla", command=self.on_close_undo
+        )
+        self.annulla_button.pack(side=tk.RIGHT, expand=True)
+
+        self.no_button = tk.Button(
+            self.on_close_window, text="No", command=self.on_close_cancel
+        )
+        self.no_button.pack(side=tk.BOTTOM, expand=True)
+
+    def on_close_ok(self):
+        self.save_wallet_fast()
+        self.on_close_window.destroy()
+        self.root.destroy()
+
+    def on_close_cancel(self):
+        self.on_close_window.destroy()
+        self.root.destroy()
+
+    def on_close_undo(self):
+        self.on_close_window.destroy()
 
     def write_totals(self, expenses):
         # Add labels to the frame
@@ -451,7 +488,7 @@ class WalletGUI:
         )
         self.wallet.df = self.wallet.df.reset_index(drop=True)
 
-    def view_expenses(self):
+    def view_expenses(self, *args):
         # pulisci la tabella
         for item in self.tree.get_children():
             self.tree.delete(item)
@@ -485,7 +522,8 @@ class WalletGUI:
             expenses = expenses[expenses["Conto"] == self.conto_var_filter.get()]
 
         if expenses.empty:
-            messagebox.showinfo("Info", "No expenses found.")
+            # messagebox.showinfo("Info", "No expenses found.")
+            pass
         else:
             """self.tree["columns"] = list(expenses.columns)
             for column in self.tree["columns"]:
@@ -503,12 +541,12 @@ class WalletGUI:
             for column in self.tree["columns"]:
                 self.tree.heading(column, text=column)
 
-            # stampa la tabella con la prima colonna piu
-            # Imposta la larghezza della prima colonna
-            first_column = self.tree["columns"][0]
-            self.tree.column(
-                first_column, width=13
-            )  # Modifica il valore 100 per adattarlo alle tue esigenze
+            ## Imposta la larghezza della prima colonna
+            # colonna data
+            self.tree.column("ID", width=10)
+            self.tree.column("Y", width=10)
+            self.tree.column("M", width=10)
+            self.tree.column("D", width=10)
 
             for index, row in expenses.iterrows():
                 if row["Type"] == 1:
@@ -521,15 +559,20 @@ class WalletGUI:
         return expenses
 
     def default_view(self):
+        self.category_var_filter.set("All")
+        self.conto_var_filter.set("All")
+        # self.view_expenses() # la fa in automatico perche c'e il trace
+
+    def default_view_time(self):
         self.month_var.set("All")
         self.year_var.set("All")
         self.view_expenses()
 
     def corrent_month_view(self):
         now = datetime.now()
-        self.month_var.set(now.month)
         self.year_var.set(now.year)
-        self.view_expenses()
+        self.month_var.set(now.month)
+        # self.view_expenses() # la fa in automatico perche c'e il trace
 
     def sort_values_gui(self, column):
 
@@ -788,33 +831,31 @@ class WalletGUI:
 
     def save_wallet(self, event=None):
         # Apri la finestra di dialogo per selezionare la cartella in cui salvare il file
-        folder_path = filedialog.askdirectory()
+        folder_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "dati")
+        file_name = filedialog.asksaveasfilename(
+            initialdir=folder_path,
+            title="Save as",
+            filetypes=(
+                ("CSV files", "*.csv"),
+                ("Excel files", "*.xlsx"),
+                ("all files", "*.*"),
+            ),
+            defaultextension=".csv",
+        )
 
-        # Controlla se l'utente ha selezionato una cartella
-        if folder_path:
-            # Qui puoi salvare il file nel modo che preferisci.
-            # Ad esempio, se è un file CSV, potresti utilizzare pandas per salvarlo.
-            # voglio scegliere anche il nome del file
-            file_name = filedialog.asksaveasfilename(
-                initialdir=folder_path,
-                title="Save as",
-                filetypes=(
-                    ("CSV files", "*.csv"),
-                    ("Excel files", "*.xlsx"),
-                    ("all files", "*.*"),
-                ),
-                defaultextension=".csv",
-            )
+        # Controlla l'estensione del file_name
+        _, extension = os.path.splitext(file_name)
 
-            # Controlla l'estensione del file_name
-            _, extension = os.path.splitext(file_name)
+        # Se l'estensione è .xlsx, salva il DataFrame in un file Excel
+        if extension == ".xlsx":
+            self.wallet.df.to_excel(file_name, index=False)
+        # Altrimenti, salva il DataFrame in un file CSV
+        else:
+            self.wallet.df.to_csv(file_name, index=False)
 
-            # Se l'estensione è .xlsx, salva il DataFrame in un file Excel
-            if extension == ".xlsx":
-                self.wallet.df.to_excel(file_name, index=False)
-            # Altrimenti, salva il DataFrame in un file CSV
-            else:
-                self.wallet.df.to_csv(file_name, index=False)
+    def save_wallet_fast(self, event=None):
+        # Salva il file in modo veloce
+        self.wallet.df.to_csv(self.wallet.wallet_path, index=False)
 
     def new_wallet(self, event=None):
         # apri una finestra di dialogo per confermare la creazione di un nuovo wallet
