@@ -1,5 +1,5 @@
-from wallet import *
 from GUI import *
+from wallet import *
 import os
 
 # crea un objeto della classe Wallet

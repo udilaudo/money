@@ -4,9 +4,16 @@ from tkinter import ttk, messagebox
 from tkinter import filedialog
 import os
 from datetime import datetime
+import pandas as pd
+from cycler import cycler
+from wallet import Wallet
 
 
 class WalletGUI:
+    """
+    Questa classe crea una GUI per visualizzare e modificare i dati di un wallet.
+    """
+
     def __init__(self, wallet):
         self.wallet = wallet
         self.categories_list = [
@@ -30,7 +37,11 @@ class WalletGUI:
         )
         self.default_botton = self._setup_default_button()
         self.label_frame = self._setup_label_frame()
+        self._setup_key_bindings()
 
+    # ------------------ GUI SETUP ------------------
+
+    def _setup_key_bindings(self):
         # comandi da tastiera e mouse
         self.root.bind("<Delete>", self.delete_expense)
         self.root.bind("<Return>", self.show_info_enter)
@@ -182,6 +193,8 @@ class WalletGUI:
         expenses = self.draw_table(expenses)
         self.write_totals(expenses)
         return self.label_frame
+
+    # ------------------ GUI FUNCTIONALITY ------------------
 
     def write_totals(self, expenses):
         # Add labels to the frame

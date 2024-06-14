@@ -2,7 +2,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from cycler import cycler
-from datetime import datetime
 
 
 # Description: This file contains the class wallet, which is used to manage the wallet of the user.
@@ -129,6 +128,10 @@ class Wallet:
         self.df = self.df.sort_values(
             by=["Y", "M", "D", "Category", "Amount"], ascending=False
         )
+        #
+        self.df = self.df.reset_index(drop=True)
+        # riordina gli ID
+        self.df["ID"] = self.df.index
         # sprta per amount dalla piu grande alla piu piccola
 
         self.outcome = self.df[self.df["Type"] == 0]["Amount"].sum()
