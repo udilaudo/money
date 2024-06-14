@@ -47,8 +47,9 @@ class WalletGUI:
     def _setup_key_bindings(self):
         # comandi da tastiera e mouse
         self.root.bind("<Delete>", self.delete_expense)
-        self.root.bind("<Return>", self.show_info_enter)
-        self.tree.bind("<Double-1>", self.show_info_enter)
+        self.root.bind("<Return>", self.edit_expense)
+        self.tree.bind("<Double-1>", self.edit_expense)
+        self.root.bind("<Control-e>", self.edit_expense)
         self.root.bind("<Control-s>", self.save_wallet_fast)
         self.root.bind("<Control-o>", self.upload_wallet)
         self.root.bind("<Control-n>", self.new_wallet)
@@ -59,7 +60,7 @@ class WalletGUI:
     def _setup_root(self):
         root = tk.Tk()
         root.configure(bg="lightgrey")
-        root.geometry("1400x800")
+        root.geometry("1400x800+250+80")
         root.title("Wallet")
         return root
 
@@ -98,8 +99,15 @@ class WalletGUI:
             ("Default Categorie", self.default_view, None, 1, 0),
         ]
         for text, command, bg, row, column in buttons:
-            button = tk.Button(frame, text=text, command=command, bg=bg)
-            button.grid(row=row, column=column)
+            button = tk.Button(
+                frame, text=text, command=command, bg=bg, width=16, height=1
+            )
+            if row == 0:  # If it's the first row
+                button.grid(
+                    row=row, column=column, pady=(10, 3), padx=5
+                )  # Add padding at the top
+            else:
+                button.grid(row=row, column=column)
 
     def _setup_menu_bar(self):
         menu_bar = tk.Menu(self.root)
@@ -214,7 +222,7 @@ class WalletGUI:
         return default_botton
 
     def _setup_label_frame(self):
-        self.label_frame = tk.LabelFrame(self.root, text="Totals", padx=30, pady=30)
+        self.label_frame = tk.LabelFrame(self.root, text="Totals")
         self.label_frame.pack(padx=30, pady=30)
         # canvas = tk.Canvas(self.label_frame, width=200, height=200)
         # canvas.pack()
@@ -235,7 +243,7 @@ class WalletGUI:
             # apri una finestra con "salva" "non salvare" "annulla"
             self.on_close_window = tk.Toplevel(self.root)
             self.on_close_window.title("Salva prima di uscire?")
-            self.on_close_window.geometry("300x150")
+            self.on_close_window.geometry("300x150+800+400")
             self.on_close_label = tk.Label(
                 self.on_close_window, text="Vuoi salvare prima di uscire?"
             )
@@ -276,33 +284,33 @@ class WalletGUI:
             font=("Helvetica", 12, "bold"),
             bg="grey",
         )
-        self.total_expenses_label.pack()
+        self.total_expenses_label.pack(pady=10)
 
         self.total_expenses_label_in = tk.Label(
             self.label_frame,
             text=f"Totale Entrate: {expenses[expenses['Type'] == 1]['Amount'].sum()}",
             font=("Helvetica", 18, "bold"),
         )
-        self.total_expenses_label_in.pack()
+        self.total_expenses_label_in.pack(padx=10)
 
         self.total_expenses_label_out = tk.Label(
             self.label_frame,
             text=f"Totale Uscite: {expenses[expenses['Type'] == 0]['Amount'].sum()}",
             font=("Helvetica", 12, "bold"),
         )
-        self.total_expenses_label_out.pack()
+        self.total_expenses_label_out.pack(padx=10)
 
         self.total_len = tk.Label(
             self.label_frame,
             text=f"Numero di spese: {len(expenses)}",
             font=("Helvetica", 12, "bold"),
         )
-        self.total_len.pack()
+        self.total_len.pack(pady=10)
 
     def select_time(self):
         self.add_windows_range = tk.Toplevel(self.root)
         self.add_windows_range.title("Seleziona Range Temporale")
-        self.add_windows_range.geometry("400x200")
+        self.add_windows_range.geometry("400x200+700+350")
 
         self.title = tk.Label(
             self.add_windows_range, text="Seleziona il range temporale che preferisci:"
@@ -396,7 +404,7 @@ class WalletGUI:
         self.add_expense_window.title("Nuova Spesa")
         # set the size of the window
 
-        self.add_expense_window.geometry("350x350")
+        self.add_expense_window.geometry("350x350+700+350")
 
         self.amount_label = tk.Label(self.add_expense_window, text="Amount")
         self.amount_label.pack()
@@ -628,7 +636,7 @@ class WalletGUI:
         popup.add_command(label="Cancella", command=self.delete_expense)
         popup.tk_popup(event.x_root, event.y_root)
 
-    def edit_expense(self):
+    def edit_expense(self, event=None):
         # apri una finestra per modificare la spesa
         selected = self.tree.selection()
         if not selected:
@@ -639,7 +647,7 @@ class WalletGUI:
 
         self.edit_expense_window = tk.Toplevel(self.root)
         self.edit_expense_window.title("Modifica Spesa")
-        self.edit_expense_window.geometry("380x350")
+        self.edit_expense_window.geometry("380x350+700+350")
 
         self.amount_label = tk.Label(self.edit_expense_window, text="Amount")
         self.amount_label.pack()
@@ -765,7 +773,7 @@ class WalletGUI:
         row_index = self.tree.item(selected[0])["values"][0]
         self.delete_window = tk.Toplevel(self.root)
         self.delete_window.title("Cancella la spesa")
-        self.delete_window.geometry("300x150")
+        self.delete_window.geometry("300x150+800+400")
         self.delete_label = tk.Label(
             self.delete_window, text="Sei sicuro di voler cancellare la spesa?"
         )
@@ -899,6 +907,7 @@ class WalletGUI:
         # apri una finestra di dialogo per confermare la creazione di un nuovo wallet
         self.new_wallet_window = tk.Toplevel(self.root)
         self.new_wallet_window.title("Nuovo Wallet?")
+        self.new_wallet_window.geometry("250x200+800+400")
 
         # aggiungi una informazione
         self.new_wallet_label = tk.Label(
