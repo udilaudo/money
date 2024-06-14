@@ -2,7 +2,6 @@
 dist/
 build/
 # ignora le immagini
-*.webp
-*.ico
-*.spec
-*.xbm
+imgs/
+# ignora i file notebook
+*.ipynb
