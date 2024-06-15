@@ -97,6 +97,7 @@ class WalletGUI:
             ("Default Tempo", self.default_view_time, None, 1, 1),
             ("Cancella Spesa", self.delete_expense, "pink", 0, 1),
             ("Default Categorie", self.default_view, None, 1, 0),
+            ("Giroconto", self.giroconto, None, 0, 4),
         ]
         for text, command, bg, row, column in buttons:
             button = tk.Button(
@@ -173,7 +174,9 @@ class WalletGUI:
         self.category_label.pack(side=tk.LEFT)
         self.category_var_filter = tk.StringVar(self.root)
         self.category_var_filter.set("All")
-        category_options = ["All"] + self.categories_list + ["Uscite"]
+        category_options = (
+            ["All"] + self.categories_list + ["Saldo", "Giroconto", "Uscite"]
+        )
         category_menu = tk.OptionMenu(
             self.root, self.category_var_filter, *category_options
         )
@@ -277,9 +280,14 @@ class WalletGUI:
 
     def write_totals(self, expenses):
         # Add labels to the frame
+        entrate = expenses[expenses["Type"] == 1]["Amount"].sum()
+        uscite = expenses[expenses["Type"] == 0]["Amount"].sum()
+        saldo_old_out = expenses[expenses["Type"] == 2]["Amount"].sum()
+        saldo_old_in = expenses[expenses["Type"] == 3]["Amount"].sum()
+        saldo = entrate + uscite + saldo_old_out + saldo_old_in
         self.total_expenses_label = tk.Label(
             self.label_frame,
-            text=f"Saldo: {expenses['Amount'].sum()}",
+            text=f"Saldo: {round(saldo,2)}",
             fg="white",
             font=("Helvetica", 12, "bold"),
             bg="grey",
@@ -288,14 +296,14 @@ class WalletGUI:
 
         self.total_expenses_label_in = tk.Label(
             self.label_frame,
-            text=f"Totale Entrate: {expenses[expenses['Type'] == 1]['Amount'].sum()}",
+            text=f"Totale Entrate: {round(entrate + saldo_old_in,2)}",
             font=("Helvetica", 18, "bold"),
         )
         self.total_expenses_label_in.pack(padx=10)
 
         self.total_expenses_label_out = tk.Label(
             self.label_frame,
-            text=f"Totale Uscite: {expenses[expenses['Type'] == 0]['Amount'].sum()}",
+            text=f"Totale Uscite: {round(uscite + saldo_old_out,2)}",
             font=("Helvetica", 12, "bold"),
         )
         self.total_expenses_label_out.pack(padx=10)
@@ -551,14 +559,11 @@ class WalletGUI:
             # messagebox.showinfo("Info", "No expenses found.")
             pass
         else:
-            """self.tree["columns"] = list(expenses.columns)
-            for column in self.tree["columns"]:
-                self.tree.heading(column, text=column)
-
-            for index, row in expenses.iterrows():
-                self.tree.insert("", "end", values=list(row))"""
             # evidenzia le righe di Type 1 di verde chiarissimo
             self.tree.tag_configure("income", background="lightgreen")
+            self.tree.tag_configure("giro", background="pink")
+            self.tree.tag_configure("giro+", background="green")
+            self.tree.tag_configure("giro-", background="lightcoral")
             # evidenzia le righe di Type 0 di rosso chiarissimo
             # self.tree.tag_configure("expense", background="lightcoral")
 
@@ -577,12 +582,88 @@ class WalletGUI:
             for index, row in expenses.iterrows():
                 if row["Type"] == 1:
                     self.tree.insert("", "end", values=list(row)[:-1], tags="income")
+                elif row["Type"] == 2:
+                    self.tree.insert("", "end", values=list(row)[:-1], tags="giro-")
+                elif row["Type"] == 3:
+                    self.tree.insert("", "end", values=list(row)[:-1], tags="giro+")
+                elif row["Type"] == 4:
+                    self.tree.insert("", "end", values=list(row)[:-1], tags="giro")
                 else:
                     self.tree.insert("", "end", values=list(row)[:-1])
 
         self.expenses_show = expenses
 
         return expenses
+
+    def giroconto(self):
+        self.giroconto_window = tk.Toplevel(self.root)
+        self.giroconto_window.title("Giroconto")
+        self.giroconto_window.geometry("400x200+700+350")
+
+        self.title = tk.Label(self.giroconto_window, text="Vuoi fare un giroconto?")
+        self.title.pack()
+
+        self.amount_label = tk.Label(self.giroconto_window, text="Amount")
+        self.amount_label.pack()
+        self.amount_entry = tk.Entry(self.giroconto_window)
+        self.amount_entry.pack()
+
+        self.conto_info = tk.Label(self.giroconto_window, text="Da dove a dove?")
+        # sposta un po in basso il label
+
+        self.conto_info.pack()
+
+        self.conto_var = tk.StringVar(value="bancoposta")
+        self.conto_var.set("bancoposta")
+        self.conto_options = ["bancoposta", "evolution", "contanti"]
+        self.conto_menu = tk.OptionMenu(
+            self.giroconto_window, self.conto_var, *self.conto_options
+        )
+        self.conto_menu.pack()
+
+        self.conto_var_end = tk.StringVar(value="bancoposta")
+        self.conto_var_end.set("bancoposta")
+        self.conto_options = ["bancoposta", "evolution", "contanti"]
+        self.conto_menu_end = tk.OptionMenu(
+            self.giroconto_window, self.conto_var_end, *self.conto_options
+        )
+        self.conto_menu_end.pack()
+
+        # data
+        self.date_label = tk.Label(self.giroconto_window, text="Date (YYYY-MM-DD) *")
+        self.date_label.pack()
+
+        self.date_entry = tk.Entry(self.giroconto_window)
+        self.date_entry.pack()
+
+        self.submit_button = tk.Button(
+            self.giroconto_window, text="Giroconto", command=self.submit_giroconto
+        )
+        self.submit_button.configure(bg="lightgreen")
+        self.submit_button.pack(side=tk.BOTTOM)
+
+    def submit_giroconto(self):
+        amount = float(self.amount_entry.get())
+        conto = self.conto_var.get()
+        conto_end = self.conto_var_end.get()
+        # prendi la data
+        date = self.date_entry.get()
+        if date:
+            year, month, day = map(int, date.split("-"))
+        else:
+            now = datetime.now()
+            year, month, day = now.year, now.month, now.day
+
+        self.wallet.giroconto(amount, conto, conto_end, year, month, day)
+        self.giroconto_window.destroy()
+
+        # ordina per data dalla piu recente alla meno recente
+        self.wallet.df = self.wallet.df.sort_values(
+            by=["Y", "M", "D", "Category", "Amount"], ascending=False
+        )
+        self.reorganize_table()
+        self.view_expenses()
+        self.root.title("Wallet •")
 
     def default_view(self):
         self.category_var_filter.set("All")
@@ -813,41 +894,48 @@ class WalletGUI:
 
     def plot_static(self):
         expenses = self.expenses_show
+        # escludi la categoria "Giroconto"
+
+        print(expenses)
 
         new_wallet = Wallet()
-        new_wallet.read_df(expenses)
+        new_wallet.read_df(expenses[expenses["Category"] != "Giroconto"])
 
         new_wallet.plot()
 
     def plot_time(self):
         expenses = self.expenses_show
+        # escludi la categoria "Giroconto"
 
         new_wallet = Wallet()
-        new_wallet.read_df(expenses)
+        new_wallet.read_df(expenses[expenses["Category"] != "Giroconto"])
 
         new_wallet.plot_time()
 
     def plot_pie(self):
         expenses = self.expenses_show
+        # escludi la categoria "Giroconto"
 
         new_wallet = Wallet()
-        new_wallet.read_df(expenses)
+        new_wallet.read_df(expenses[expenses["Category"] != "Giroconto"])
 
         new_wallet.plot_pie()
 
     def plot_pie_with_all_categories(self):
         expenses = self.expenses_show
+        # escludi la categoria "Giroconto"
 
         new_wallet = Wallet()
-        new_wallet.read_df(expenses)
+        new_wallet.read_df(expenses[expenses["Category"] != "Giroconto"])
 
         new_wallet.plot_pie_with_all_categories()
 
     def plot_pie_conto(self):
         expenses = self.expenses_show
+        # escludi la categoria "Giroconto"
 
         new_wallet = Wallet()
-        new_wallet.read_df(expenses)
+        new_wallet.read_df(expenses[expenses["Category"] != "Giroconto"])
 
         new_wallet.plot_pie_conto()
 

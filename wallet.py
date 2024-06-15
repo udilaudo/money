@@ -20,9 +20,14 @@ class Wallet:
                 "Type",
             ]
         )
+        # Type 0 = spesa, Type 1 = entrata, Type 2 = saldo iniziale uscita, Type 3 = saldo iniziale entrata, Type 4 = giroconto
         self.outcome = self.df[self.df["Type"] == 0]["Amount"].sum()
         self.income = self.df[self.df["Type"] == 1]["Amount"].sum()
-        self.amount = self.income - self.outcome
+        self.inital_saldo_out = self.df[(self.df["Type"] == 2)]["Amount"].sum()
+        self.inital_saldo_in = self.df[(self.df["Type"] == 3)]["Amount"].sum()
+        self.amount = (
+            self.income - self.outcome + self.inital_saldo_in - self.inital_saldo_out
+        )
         self.categories = self.df["Category"].unique()
         self.start_date = (
             self.df["Y"].min(),
@@ -76,7 +81,11 @@ class Wallet:
 
         self.outcome = self.df[self.df["Type"] == 0]["Amount"].sum()
         self.income = self.df[self.df["Type"] == 1]["Amount"].sum()
-        self.amount = self.income + self.outcome
+        self.inital_saldo_out = self.df[(self.df["Type"] == 2)]["Amount"].sum()
+        self.inital_saldo_in = self.df[(self.df["Type"] == 3)]["Amount"].sum()
+        self.amount = (
+            self.income - self.outcome + self.inital_saldo_in - self.inital_saldo_out
+        )
         self.categories = self.df["Category"].unique()
         self.start_date = (
             self.df["Y"].min(),
@@ -124,7 +133,49 @@ class Wallet:
         self.df = self.df.drop(index)
         self.outcome = self.df[self.df["Type"] == 0]["Amount"].sum()
         self.income = self.df[self.df["Type"] == 1]["Amount"].sum()
-        self.amount = self.income + self.outcome
+        self.inital_saldo_out = self.df[(self.df["Type"] == 2)]["Amount"].sum()
+        self.inital_saldo_in = self.df[(self.df["Type"] == 3)]["Amount"].sum()
+        self.amount = (
+            self.income - self.outcome + self.inital_saldo_in - self.inital_saldo_out
+        )
+        self.categories = self.df["Category"].unique()
+        self.start_date = (
+            self.df["Y"].min(),
+            self.df[self.df["Y"] == self.df["Y"].min()]["M"].min(),
+        )
+        self.end_date = (
+            self.df["Y"].max(),
+            self.df[self.df["Y"] == self.df["Y"].max()]["M"].max(),
+        )
+
+    def giroconto(
+        self,
+        amount,
+        conto_out,
+        conto_in,
+        y,
+        m,
+        d,
+        y_firts=2023,
+        m_first=12,
+        d_first=31,
+    ):
+        category = "Saldo"
+        description = f"da {conto_out} a {conto_in}"
+        self.add(amount, "Giroconto", description, y, m, d, None, 4)
+
+        self.add(
+            -amount, category, description, y_firts, m_first, d_first, conto_out, 2
+        )
+        self.add(amount, category, description, y_firts, m_first, d_first, conto_in, 3)
+
+        self.outcome = self.df[self.df["Type"] == 0]["Amount"].sum()
+        self.income = self.df[self.df["Type"] == 1]["Amount"].sum()
+        self.inital_saldo_out = self.df[(self.df["Type"] == 2)]["Amount"].sum()
+        self.inital_saldo_in = self.df[(self.df["Type"] == 3)]["Amount"].sum()
+        self.amount = (
+            self.income - self.outcome + self.inital_saldo_in - self.inital_saldo_out
+        )
         self.categories = self.df["Category"].unique()
         self.start_date = (
             self.df["Y"].min(),
@@ -149,7 +200,11 @@ class Wallet:
 
         self.outcome = self.df[self.df["Type"] == 0]["Amount"].sum()
         self.income = self.df[self.df["Type"] == 1]["Amount"].sum()
-        self.amount = self.income + self.outcome
+        self.inital_saldo_out = self.df[(self.df["Type"] == 2)]["Amount"].sum()
+        self.inital_saldo_in = self.df[(self.df["Type"] == 3)]["Amount"].sum()
+        self.amount = (
+            self.income - self.outcome + self.inital_saldo_in - self.inital_saldo_out
+        )
         self.categories = self.df["Category"].unique()
         self.start_date = (
             self.df["Y"].min(),
@@ -166,7 +221,11 @@ class Wallet:
         self.df = pd.read_excel(path)
         self.outcome = self.df[self.df["Type"] == 0]["Amount"].sum()
         self.income = self.df[self.df["Type"] == 1]["Amount"].sum()
-        self.amount = self.income + self.outcome
+        self.inital_saldo_out = self.df[(self.df["Type"] == 2)]["Amount"].sum()
+        self.inital_saldo_in = self.df[(self.df["Type"] == 3)]["Amount"].sum()
+        self.amount = (
+            self.income - self.outcome + self.inital_saldo_in - self.inital_saldo_out
+        )
         self.categories = self.df["Category"].unique()
         self.start_date = (
             self.df["Y"].min(),
@@ -183,7 +242,11 @@ class Wallet:
         self.df = df
         self.outcome = self.df[self.df["Type"] == 0]["Amount"].sum()
         self.income = self.df[self.df["Type"] == 1]["Amount"].sum()
-        self.amount = self.income + self.outcome
+        self.inital_saldo_out = self.df[(self.df["Type"] == 2)]["Amount"].sum()
+        self.inital_saldo_in = self.df[(self.df["Type"] == 3)]["Amount"].sum()
+        self.amount = (
+            self.income - self.outcome + self.inital_saldo_in - self.inital_saldo_out
+        )
         self.categories = self.df["Category"].unique()
         self.start_date = (
             self.df["Y"].min(),
@@ -298,7 +361,9 @@ class Wallet:
     def plot_pie(self):
         # plotta un grafico a torta con le entrate e le uscite
         # se ci sono sia entrate che uscite
-        if self.income != 0 and self.outcome != 0:
+        if (self.income + self.inital_saldo_in) != 0 and (
+            self.outcome + self.inital_saldo_out
+        ) != 0:
             temp_df = self.df.copy()
             temp_df["Amount"] = temp_df["Amount"].abs()
             temp_df = temp_df.groupby("Type")["Amount"].sum().reset_index()
@@ -313,7 +378,7 @@ class Wallet:
             plt.title("Entrate e Uscite")
             plt.savefig("./plots/in_out_pie_plot.png")
             plt.show()
-        elif self.outcome == 0:
+        elif (self.outcome + self.inital_saldo_out) == 0:
             # fare un grafico a torta solo con le entrate con una torta piena al 100%
             plt.figure(figsize=(10, 6))
             plt.pie([1], labels=["Income"], autopct="%1.1f%%", colors=["#1E90FF"])
@@ -321,7 +386,7 @@ class Wallet:
             plt.savefig("./plots/in_out_pie_plot.png")
             plt.show()
 
-        elif self.income == 0:
+        elif (self.income + self.inital_saldo_in) == 0:
             # fare un grafico a torta solo con le uscite con una torta piena al 100%
             plt.figure(figsize=(10, 6))
             plt.pie([1], labels=["Outcome"], autopct="%1.1f%%", colors=["#FF6347"])
