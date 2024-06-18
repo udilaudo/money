@@ -257,7 +257,7 @@ class Wallet:
             self.df[self.df["Y"] == self.df["Y"].max()]["M"].max(),
         )
 
-    def plot(self):
+    def plot(self, show=True):
         # plotta istogramma con colori diversi tra entrate e uscite
 
         # prendi solo il valore assoluto
@@ -284,9 +284,14 @@ class Wallet:
         plt.xticks(rotation=45)
         plt.tight_layout()
         plt.savefig("./plots/category_bar_plot.png")
-        plt.show()
 
-    def plot_time(self):
+        # non voglio farlo vedere neanche se plt.show() è chiamato in seguito ad altre funzioni
+        if show:
+            plt.show()
+        else:
+            plt.close()
+
+    def plot_time(self, show=True):
         temp_df = self.df.copy()
         temp_df["Amount"] = temp_df["Amount"].abs()
         # plotta andamento temporale delle entrate e delle uscite con istogramma mensile ma che tiene conto degli anni
@@ -320,45 +325,12 @@ class Wallet:
         plt.xticks(rotation=45)
         plt.tight_layout()
         plt.savefig("./plots/time_bar_plot.png")
-        plt.show()
+        if show:
+            plt.show()
+        else:
+            plt.close()
 
-    def plot_time_line(self):
-        temp_df = self.df.copy()
-        temp_df["Amount"] = temp_df["Amount"].abs()
-        # plotta andamento temporale delle entrate e delle uscite con istogramma mensile ma che tiene conto degli anni
-        temp_df = temp_df.groupby(["M", "Y", "Type"])["Amount"].sum().reset_index()
-        temp_df = temp_df.sort_values(by=["Y", "M"])
-
-        # plot considerando anche gli anni, quindi il 3 gennaio 2022 è diverso dal 3 gennaio 2023
-        # crea una colonna con la data completa
-        temp_df["Date"] = temp_df["Y"].astype(str) + "-" + temp_df["M"].astype(str)
-        temp_df["Date"] = pd.to_datetime(temp_df["Date"], format="%Y-%m")
-        temp_df = temp_df.sort_values(by="Date")
-
-        # cancella il giorno dalla data
-        temp_df["Date"] = temp_df["Date"].dt.to_period("M")
-
-        # disegna il plot con lineplot marcando i punti dove ci sono le spese
-
-        sns.set_theme(style="whitegrid")
-        plt.figure(figsize=(10, 6))
-        sns.lineplot(
-            x="Date",
-            y="Amount",
-            data=temp_df,
-            hue="Type",
-            palette=["#FF6347", "#1E90FF"],
-        )
-        # controlla che categoria siano presenti
-
-        plt.title("Spese nel Tempo")
-        plt.xlabel("Date")
-        plt.ylabel("Amount")
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        plt.show()
-
-    def plot_pie(self):
+    def plot_pie(self, show=True):
         # plotta un grafico a torta con le entrate e le uscite
         # se ci sono sia entrate che uscite
         if (self.income + self.inital_saldo_in) != 0 and (
@@ -377,14 +349,20 @@ class Wallet:
             )
             plt.title("Entrate e Uscite")
             plt.savefig("./plots/in_out_pie_plot.png")
-            plt.show()
+            if show:
+                plt.show()
+            else:
+                plt.close()
         elif (self.outcome + self.inital_saldo_out) == 0:
             # fare un grafico a torta solo con le entrate con una torta piena al 100%
             plt.figure(figsize=(10, 6))
             plt.pie([1], labels=["Income"], autopct="%1.1f%%", colors=["#1E90FF"])
             plt.title("Entrate e Uscite")
             plt.savefig("./plots/in_out_pie_plot.png")
-            plt.show()
+            if show:
+                plt.show()
+            else:
+                plt.close()
 
         elif (self.income + self.inital_saldo_in) == 0:
             # fare un grafico a torta solo con le uscite con una torta piena al 100%
@@ -392,9 +370,12 @@ class Wallet:
             plt.pie([1], labels=["Outcome"], autopct="%1.1f%%", colors=["#FF6347"])
             plt.title("Entrate e Uscite")
             plt.savefig("./plots/in_out_pie_plot.png")
-            plt.show()
+            if show:
+                plt.show()
+            else:
+                plt.close()
 
-    def plot_pie_with_all_categories(self):
+    def plot_pie_with_all_categories(self, show=True):
         # plotta un grafico a torta con tutte le categorie diverse di spese
         temp_df = self.df.copy()
         temp_df["Amount"] = temp_df["Amount"].abs()
@@ -416,9 +397,12 @@ class Wallet:
         )
         plt.title("Spese per Categorie")
         plt.savefig("./plots/category_pie_plot.png")
-        plt.show()
+        if show:
+            plt.show()
+        else:
+            plt.close()
 
-    def plot_pie_conto(self):
+    def plot_pie_conto(self, show=True):
         # plotta un grafico a torta con tutte le categorie diverse di spese
         temp_df = self.df.copy()
         temp_df["Amount"] = temp_df["Amount"].abs()
@@ -440,7 +424,10 @@ class Wallet:
         )
         plt.title("Spese per Conto")
         plt.savefig("./plots/conto_pie_plot.png")
-        plt.show()
+        if show:
+            plt.show()
+        else:
+            plt.close()
 
     def __repr__(self) -> str:
         return self.df.__repr__()

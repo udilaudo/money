@@ -5,7 +5,6 @@ from tkinter import filedialog
 import os
 from datetime import datetime
 import pandas as pd
-from cycler import cycler
 from wallet import Wallet
 
 
@@ -895,8 +894,6 @@ class WalletGUI:
     def plot_static(self):
         expenses = self.expenses_show
         # escludi la categoria "Giroconto"
-
-        print(expenses)
 
         new_wallet = Wallet()
         new_wallet.read_df(expenses[expenses["Category"] != "Giroconto"])
