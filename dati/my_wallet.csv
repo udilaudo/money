@@ -1,12 +1,22 @@
 ID,Amount,Category,Description,Y,M,D,Conto,Type
-0,-41.3,Spesa,spesa oggi,2024,6,18,contanti,0
-1,2500.0,Entrate,pensione papa,2024,6,18,bancoposta,1
-2,-2.3,Mangiare Fuori,panino mec mestre,2024,6,17,bancoposta,0
-3,-8.5,Mangiare Fuori,kebab + gelato,2024,6,17,bancoposta,0
-4,150.0,Entrate,regali papa,2024,6,16,contanti,1
-5,-6.0,Mangiare Fuori,caffe martina,2024,6,14,contanti,0
-6,-18.99,Altro,bluetooth macchina,2024,6,14,evolution,0
-7,-8.3,Mangiare Fuori,cena andrea,2024,6,12,contanti,0
-8,3269.95,Saldo,saldo conto corrente,2023,12,31,bancoposta,3
-9,95.4,Saldo,saldo evolution,2023,12,31,evolution,3
-10,34.3,Saldo,saldo contanti,2023,12,31,contanti,3
+0,1193.0,Entrate,stipendio,2024,6,25,bancoposta,1
+1,-6.0,Mangiare Fuori,varie ape,2024,6,24,evolution,0
+2,300.0,Giroconto,da bancoposta a evolution,2024,6,24,,4
+3,-10.0,Casa,dentrificio e sapone,2024,6,24,evolution,0
+4,-5.6,Altro,bus 2 giorni,2024,6,24,evolution,0
+5,-6.3,Mangiare Fuori,colazione fra,2024,6,23,evolution,0
+6,-15.0,Mangiare Fuori,poke,2024,6,23,evolution,0
+7,-10.0,Auto,benzina,2024,6,23,contanti,0
+8,-41.3,Spesa,spesa oggi,2024,6,18,contanti,0
+9,2500.0,Entrate,pensione papa,2024,6,18,bancoposta,1
+10,-2.3,Mangiare Fuori,panino mec mestre,2024,6,17,bancoposta,0
+11,-8.5,Mangiare Fuori,kebab + gelato,2024,6,17,bancoposta,0
+12,150.0,Entrate,regali papa,2024,6,16,contanti,1
+13,-6.0,Mangiare Fuori,caffe martina,2024,6,14,contanti,0
+14,-18.99,Altro,bluetooth macchina,2024,6,14,evolution,0
+15,-8.3,Mangiare Fuori,cena andrea,2024,6,12,contanti,0
+16,3269.95,Saldo,saldo conto corrente,2023,12,31,bancoposta,3
+17,300.0,Saldo,da bancoposta a evolution,2023,12,31,evolution,3
+18,95.4,Saldo,saldo evolution,2023,12,31,evolution,3
+19,34.3,Saldo,saldo contanti,2023,12,31,contanti,3
+20,-300.0,Saldo,da bancoposta a evolution,2023,12,31,bancoposta,2

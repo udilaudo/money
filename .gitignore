@@ -6,3 +6,5 @@ imgs/
 # ignora i file notebook
 *.ipynb
 *.spec
+dati/my_wallet.csv
+save.py

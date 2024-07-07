@@ -18,10 +18,10 @@ df = df[df["Y"] == int(now.year)]
 df = df.reset_index(drop=True)
 w = Wallet()
 w.read_df(df)
-w.plot(show=False)
-w.plot_time(show=False)
-w.plot_pie(show=False)
-w.plot_pie_with_all_categories(show=False)
+# w.plot(show=False)
+# w.plot_time(show=False)
+# w.plot_pie(show=False)
+# w.plot_pie_with_all_categories(show=False)
 
 del df, w
 
