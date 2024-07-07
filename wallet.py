@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from cycler import cycler
+from datetime import datetime, timedelta
 
 
 # Description: This file contains the class wallet, which is used to manage the wallet of the user.
@@ -147,6 +148,41 @@ class Wallet:
             self.df["Y"].max(),
             self.df[self.df["Y"] == self.df["Y"].max()]["M"].max(),
         )
+
+    def filter_dataset_from_date(self, n_days_ago: int) -> pd.DataFrame:
+        # Data attuale
+        now = datetime.now()
+        year, month, day = now.year, now.month, now.day
+
+        thirty_days_ago = now - timedelta(days=n_days_ago)
+        # plotta i dati del mese corrente
+        self.df = self.df[self.df["Y"] >= int(thirty_days_ago.year)]
+        self.df = self.df[self.df["M"] >= int(thirty_days_ago.month)]
+        if thirty_days_ago.year == now.year:
+            self.df = self.df[self.df["M"] >= int(thirty_days_ago.month)]
+        else:
+            self.df = self.df[
+                (
+                    (
+                        (self.df["M"] >= thirty_days_ago.day)
+                        & (self.df["Y"] == thirty_days_ago.month)
+                    )
+                    | ((self.df["M"] <= now.day) & (self.df["Y"] == now.month))
+                )
+            ]
+        if thirty_days_ago.month == now.month:
+            self.df = self.df[self.df["D"] >= int(thirty_days_ago.day)]
+        self.df = self.df[
+            (
+                (
+                    (self.df["D"] >= thirty_days_ago.day)
+                    & (self.df["M"] == thirty_days_ago.month)
+                )
+                | ((self.df["D"] <= now.day) & (self.df["M"] == now.month))
+            )
+        ]
+
+        self.df = self.df.reset_index(drop=True)
 
     def giroconto(
         self,

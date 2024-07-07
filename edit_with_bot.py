@@ -25,11 +25,11 @@ AUTHORIZED_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 # Percorso del file csv
 CSV_FILE_PATH = "/home/umberto/prog/money/dati/my_wallet.csv"
 
-# Data attuale
+# data odierna
 now = datetime.now()
-year, month, day = now.year, now.month, now.day
-
-start_date = now - timedelta(days=30)
+year = now.year
+month = now.month
+day = now.day
 
 # Stati per la conversazione
 START, COLUMN1, COLUMN2, COLUMN3, COLUMN4, DATI = range(6)
@@ -55,7 +55,7 @@ async def start(update: Update, context: CallbackContext) -> int:
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text("Scegli un'opzione:", reply_markup=reply_markup)
+    await update.message.reply_text("Cosa vuoi fare?", reply_markup=reply_markup)
     return START
 
 
@@ -76,12 +76,19 @@ async def button(update: Update, context: CallbackContext) -> int:
         # legge i dati dal file csv
         df = pd.read_csv(CSV_FILE_PATH)
 
-        # plotta i dati degli ultimi 30 giorni
-        df = df[df["Y"] >= int(start_date.year)]
-        df = df[df["M"] >= int(start_date.month)]
-        df = df[df["D"] >= int(start_date.day)]
+        # df = filter_dataset(df, thirty_days_ago)
 
-        df = df.reset_index(drop=True)
+        w = Wallet()
+        w.read_df(df)
+        w.filter_dataset_from_date(n_days_ago=30)
+        df = w.df
+
+        # crea una nuova colonna con la data
+        df["Date"] = (
+            df["D"].astype(str) + "/" + df["M"].astype(str) + "/" + df["Y"].astype(str)
+        )
+        # elimina le colonne Y, M e D
+        df = df.drop(columns=["Y", "M", "D"])
 
         # elimina le colonne ID e Type
         df = df.drop(columns=["ID", "Type"])
@@ -91,19 +98,18 @@ async def button(update: Update, context: CallbackContext) -> int:
         await query.message.reply_text(f"```\n{table}\n```", parse_mode="MarkdownV2")
 
         return ConversationHandler.END
+
     elif query.data == "grafico_totale":
         # legge i dati dal file csv
         df = pd.read_csv(CSV_FILE_PATH)
 
         # plotta i dati del mese corrente
-        df = df[df["Y"] >= int(start_date.year)]
-        df = df[df["M"] >= int(start_date.month)]
-        df = df[df["D"] >= int(start_date.day)]
-
-        df = df.reset_index(drop=True)
+        # df = filter_dataset(df, thirty_days_ago)
 
         w = Wallet()
         w.read_df(df)
+        w.filter_dataset_from_date(n_days_ago=30)
+
         w.plot_pie_with_all_categories(show=False)
 
         # calcola il totale delle spese in uscita
@@ -116,6 +122,7 @@ async def button(update: Update, context: CallbackContext) -> int:
             photo=open("./plots/category_pie_plot.png", "rb"),
             caption=f"Uscite: {total_out} € \nEntrate: {total_in} € \nSaldo: {saldo} €",
         )
+        await query.message.edit_reply_markup(reply_markup=None)
 
         return ConversationHandler.END
 
@@ -124,17 +131,14 @@ async def button(update: Update, context: CallbackContext) -> int:
         df = pd.read_csv(CSV_FILE_PATH)
 
         # plotta i dati del mese corrente
-        df = df[df["Y"] >= int(start_date.year)]
-        df = df[df["M"] >= int(start_date.month)]
-        df = df[df["D"] >= int(start_date.day)]
+        # df = filter_dataset(df, thirty_days_ago)
 
         # elimina le entrate
         df = df[df["Type"] == 0]
 
-        df = df.reset_index(drop=True)
-
         w = Wallet()
         w.read_df(df)
+        w.filter_dataset_from_date(n_days_ago=30)
         w.plot_pie_with_all_categories(show=False)
 
         # calcola il totale delle spese in uscita
@@ -157,6 +161,8 @@ async def button(update: Update, context: CallbackContext) -> int:
             caption=f"Uscite totali: {total_out} € \n{string_to_print}",
         )
 
+        await query.message.edit_reply_markup(reply_markup=None)
+
         return ConversationHandler.END
 
 
@@ -169,7 +175,7 @@ async def column1(update: Update, context: CallbackContext) -> int:
     keyboard = [
         [InlineKeyboardButton("Spesa", callback_data="Spesa")],
         [InlineKeyboardButton("Sport", callback_data="Sport")],
-        [InlineKeyboardButton("Mangiare fuori", callback_data="Mangiare fuori")],
+        [InlineKeyboardButton("Mangiare fuori", callback_data="Mangiare Fuori")],
         [InlineKeyboardButton("Auto", callback_data="Auto")],
         [InlineKeyboardButton("Casa", callback_data="Casa")],
         [InlineKeyboardButton("Bollette", callback_data="Bollette")],
@@ -224,10 +230,10 @@ async def column4(update: Update, context: CallbackContext) -> int:
     context.user_data["column4"] = update.callback_query.data
 
     if context.user_data["query"].data == "modifica":
-        costo = -int(context.user_data["column1"])
+        costo = -float(context.user_data["column1"])
         tipo = 0
     elif context.user_data["query"].data == "entrata":
-        costo = int(context.user_data["column1"])
+        costo = float(context.user_data["column1"])
         tipo = 1
 
     new_row = {
