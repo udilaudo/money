@@ -7,4 +7,3 @@ imgs/
 *.ipynb
 *.spec
 dati/my_wallet.csv
-save.py

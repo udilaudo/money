@@ -6,6 +6,7 @@ import os
 from datetime import datetime
 import pandas as pd
 from wallet import Wallet
+from config.config import config
 
 
 class WalletGUI:
@@ -15,16 +16,7 @@ class WalletGUI:
 
     def __init__(self, wallet):
         self.wallet = wallet
-        self.categories_list = [
-            "Spesa",
-            "Sport",
-            "Mangiare Fuori",
-            "Auto",
-            "Casa",
-            "Bollette",
-            "Altro",
-            "Entrate",
-        ]
+        self.categories_list = config["categories_list"]
 
         # setup GUI
         self.root = self._setup_root()
@@ -188,7 +180,7 @@ class WalletGUI:
         self.conto_label.pack(side=tk.LEFT)
         self.conto_var_filter = tk.StringVar(self.root)
         self.conto_var_filter.set("All")
-        conto_options = ["All"] + ["bancoposta", "evolution", "contanti"]
+        conto_options = ["All"] + config["conti_list"]
         conto_menu = tk.OptionMenu(self.root, self.conto_var_filter, *conto_options)
         self.conto_var_filter.trace("w", self.view_expenses)
         conto_menu.pack(side=tk.LEFT)
@@ -447,7 +439,7 @@ class WalletGUI:
 
         self.conto_var = tk.StringVar(value="bancoposta")
         self.conto_var.set("bancoposta")
-        self.conto_options = ["bancoposta", "evolution", "contanti"]
+        self.conto_options = config["conti_list"]
         self.conto_menu = tk.OptionMenu(
             self.add_expense_window, self.conto_var, *self.conto_options
         )
@@ -614,7 +606,7 @@ class WalletGUI:
 
         self.conto_var = tk.StringVar(value="bancoposta")
         self.conto_var.set("bancoposta")
-        self.conto_options = ["bancoposta", "evolution", "contanti"]
+        self.conto_options = config["conti_list"]
         self.conto_menu = tk.OptionMenu(
             self.giroconto_window, self.conto_var, *self.conto_options
         )
@@ -622,7 +614,7 @@ class WalletGUI:
 
         self.conto_var_end = tk.StringVar(value="bancoposta")
         self.conto_var_end.set("bancoposta")
-        self.conto_options = ["bancoposta", "evolution", "contanti"]
+        self.conto_options = config["conti_list"]
         self.conto_menu_end = tk.OptionMenu(
             self.giroconto_window, self.conto_var_end, *self.conto_options
         )
@@ -770,7 +762,7 @@ class WalletGUI:
 
         self.conto_var = tk.StringVar(value=row["Conto"])
         self.conto_var.set(row["Conto"])
-        self.conto_options = ["bancoposta", "evolution", "contanti"]
+        self.conto_options = config["conti_list"]
         self.conto_menu = tk.OptionMenu(
             self.edit_expense_window, self.conto_var, *self.conto_options
         )

@@ -11,6 +11,7 @@ This repository provides a personal wallet manager application with both a graph
 
 ## Files
 
+- **config.py**: Contains the dictionaries for list of categories and list of bank accounts
 - **wallet.py**: Defines the `Wallet` class with various functions for expense management.
 - **GUI.py**: Defines the functions and interface for the graphical user interface.
 - **main.py**: Entry point for the application to launch the GUI.

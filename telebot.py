@@ -14,7 +14,7 @@ from telegram.ext import (
     filters,
 )
 from wallet import Wallet
-
+from config.config import config
 
 # Token del bot
 TOKEN = os.getenv("TELEGRAM_TOKEN_WALLET")
@@ -30,7 +30,7 @@ NOW = datetime.now()
 YEAR, MONTH, DAY = NOW.year, NOW.month, NOW.day
 
 # Stati per la conversazione
-START, COLUMN1, COLUMN2, COLUMN3, COLUMN4, DATI = range(6)
+START, COLUMN1, COLUMN2, COLUMN3, COLUMN4 = range(5)
 
 # ---------------------------- Funzioni ----------------------------
 
@@ -186,16 +186,12 @@ async def column1(update: Update, context: CallbackContext) -> int:
         return ConversationHandler.END
 
     context.user_data["column1"] = update.message.text
+
     keyboard = [
-        [InlineKeyboardButton("Spesa", callback_data="Spesa")],
-        [InlineKeyboardButton("Sport", callback_data="Sport")],
-        [InlineKeyboardButton("Mangiare fuori", callback_data="Mangiare Fuori")],
-        [InlineKeyboardButton("Auto", callback_data="Auto")],
-        [InlineKeyboardButton("Casa", callback_data="Casa")],
-        [InlineKeyboardButton("Bollette", callback_data="Bollette")],
-        [InlineKeyboardButton("Altro", callback_data="Altro")],
-        [InlineKeyboardButton("Entrate", callback_data="Entrate")],
+        [InlineKeyboardButton(category, callback_data=category)]
+        for category in config["categories_list"]
     ]
+
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await update.message.reply_text(
@@ -222,10 +218,10 @@ async def column3(update: Update, context: CallbackContext) -> int:
     context.user_data["column3"] = update.message.text
 
     keyboard = [
-        [InlineKeyboardButton("Evolution", callback_data="evolution")],
-        [InlineKeyboardButton("Bancoposta", callback_data="bancoposta")],
-        [InlineKeyboardButton("Contanti", callback_data="contanti")],
+        [InlineKeyboardButton(category, callback_data=category)]
+        for category in config["conti_list"]
     ]
+
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await update.message.reply_text("Con cosa hai pagato?", reply_markup=reply_markup)
@@ -327,7 +323,6 @@ def main():
             COLUMN2: [CallbackQueryHandler(column2)],
             COLUMN3: [MessageHandler(filters.TEXT & ~filters.COMMAND, column3)],
             COLUMN4: [CallbackQueryHandler(column4)],
-            DATI: [MessageHandler(filters.TEXT & ~filters.COMMAND, dati)],
         },
         fallbacks=[CommandHandler("start", start), CommandHandler("cancel", cancel)],
     )
