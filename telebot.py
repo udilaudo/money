@@ -26,10 +26,8 @@ AUTHORIZED_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 CSV_FILE_PATH = "/home/umberto/prog/money/dati/my_wallet.csv"
 
 # data odierna
-now = datetime.now()
-year = now.year
-month = now.month
-day = now.day
+NOW = datetime.now()
+YEAR, MONTH, DAY = NOW.year, NOW.month, NOW.day
 
 # Stati per la conversazione
 START, COLUMN1, COLUMN2, COLUMN3, COLUMN4, DATI = range(6)
@@ -55,7 +53,12 @@ async def start(update: Update, context: CallbackContext) -> int:
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text("Cosa vuoi fare?", reply_markup=reply_markup)
+    if update.message:
+        await update.message.reply_text("Cosa vuoi fare?", reply_markup=reply_markup)
+    else:
+        await update.callback_query.edit_message_text(
+            "Cosa vuoi fare?", reply_markup=reply_markup
+        )
     return START
 
 
@@ -67,10 +70,14 @@ async def button(update: Update, context: CallbackContext) -> int:
     context.user_data["query"] = query
 
     if query.data == "modifica":
-        await query.edit_message_text(text="Quanto hai speso?")
+        await query.edit_message_text(
+            text='Quanto hai speso? (Scrivi "Cancel" per annullare)'
+        )
         return COLUMN1
     elif query.data == "entrata":
-        await query.edit_message_text(text="Quanto hai ricevuto?")
+        await query.edit_message_text(
+            text='Quanto hai ricevuto?  (Scrivi "Cancel" per annullare)'
+        )
         return COLUMN1
     elif query.data == "dati":
         # legge i dati dal file csv
@@ -95,6 +102,8 @@ async def button(update: Update, context: CallbackContext) -> int:
 
         table = tabulate(df, headers="keys", tablefmt="pretty", showindex="never")
 
+        await query.edit_message_text(text="Ecco i dati degli ultimi 30 giorni:")
+
         await query.message.reply_text(f"```\n{table}\n```", parse_mode="MarkdownV2")
 
         return ConversationHandler.END
@@ -117,12 +126,13 @@ async def button(update: Update, context: CallbackContext) -> int:
         total_in = round(w.income, 2)
         saldo = total_in - total_out
 
+        await query.edit_message_text(text="Ecco il grafico delle tue spese:")
+
         # invia il grafico
         await query.message.reply_photo(
             photo=open("./plots/category_pie_plot.png", "rb"),
             caption=f"Uscite: {total_out} € \nEntrate: {total_in} € \nSaldo: {saldo} €",
         )
-        await query.message.edit_reply_markup(reply_markup=None)
 
         return ConversationHandler.END
 
@@ -155,13 +165,13 @@ async def button(update: Update, context: CallbackContext) -> int:
         for cat, tot in all_tot:
             string_to_print += f"{cat}: {tot} € \n"
 
+        await query.edit_message_text(text="Ecco il grafico delle tue uscite:")
+
         # invia il grafico
         await query.message.reply_photo(
             photo=open("./plots/category_pie_plot.png", "rb"),
             caption=f"Uscite totali: {total_out} € \n{string_to_print}",
         )
-
-        await query.message.edit_reply_markup(reply_markup=None)
 
         return ConversationHandler.END
 
@@ -169,6 +179,10 @@ async def button(update: Update, context: CallbackContext) -> int:
 async def column1(update: Update, context: CallbackContext) -> int:
     if not is_authorized(update.effective_chat.id):
         await update.message.reply_text("Non sei autorizzato a usare questo bot.")
+        return ConversationHandler.END
+
+    if update.message.text.lower() == "cancel" or update.message.text == "/start":
+        await update.message.reply_text("Operazione annullata.")
         return ConversationHandler.END
 
     context.user_data["column1"] = update.message.text
@@ -241,9 +255,9 @@ async def column4(update: Update, context: CallbackContext) -> int:
         "Amount": costo,
         "Category": context.user_data["column2"],
         "Description": context.user_data["column3"],
-        "Y": year,
-        "M": month,
-        "D": day,
+        "Y": YEAR,
+        "M": MONTH,
+        "D": DAY,
         "Conto": context.user_data["column4"],
         "Type": tipo,
     }
@@ -266,7 +280,12 @@ async def column4(update: Update, context: CallbackContext) -> int:
             ]
         )
 
-    df = df.append(new_row, ignore_index=True)
+    # df = df.append(new_row, ignore_index=True)
+    # usa concat per aggiungere la nuova riga al dataframe
+    new_row_df = pd.DataFrame([new_row])
+
+    # Usa concat per aggiungere la nuova riga al dataframe
+    df = pd.concat([df, new_row_df], ignore_index=True)
 
     # riordina il dataframe per Y, M, D e rinomina gli indici da 0 a n
     df = df.sort_values(by=["Y", "M", "D", "Category", "Amount"], ascending=False)
@@ -282,10 +301,6 @@ async def column4(update: Update, context: CallbackContext) -> int:
         text=f"Spesa aggiunta: {context.user_data['column1']}€, {context.user_data['column2']}, {context.user_data['column3']}, {context.user_data['column4']}"
     )
     return ConversationHandler.END
-
-
-async def dati(update: Update, context: CallbackContext) -> int:
-    pass
 
 
 async def cancel(update: Update, context: CallbackContext) -> int:
@@ -314,7 +329,7 @@ def main():
             COLUMN4: [CallbackQueryHandler(column4)],
             DATI: [MessageHandler(filters.TEXT & ~filters.COMMAND, dati)],
         },
-        fallbacks=[CommandHandler("cancel", cancel)],
+        fallbacks=[CommandHandler("start", start), CommandHandler("cancel", cancel)],
     )
     application.add_handler(conv_handler)
     application.run_polling()
