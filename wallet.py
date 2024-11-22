@@ -314,8 +314,8 @@ class Wallet:
             palette=["#FF6347", "#1E90FF"],
         )
 
-        plt.title("Spese per Categorie")
-        plt.xlabel("Categorie")
+        plt.title("Expenses by Category")
+        plt.xlabel("Categories")
         plt.ylabel("Amount")
         plt.xticks(rotation=45)
         plt.tight_layout()
@@ -355,7 +355,7 @@ class Wallet:
         )
         # controlla che categoria siano presenti
 
-        plt.title("Spese nel Tempo")
+        plt.title("Expenses Over Time")
         plt.xlabel("Date")
         plt.ylabel("Amount")
         plt.xticks(rotation=45)
@@ -383,7 +383,7 @@ class Wallet:
                 autopct="%1.1f%%",
                 colors=["#1E90FF", "#FF6347"],
             )
-            plt.title("Entrate e Uscite")
+            plt.title("Income and Outcome")
             plt.savefig("./plots/in_out_pie_plot.png")
             if show:
                 plt.show()
@@ -404,7 +404,7 @@ class Wallet:
             # fare un grafico a torta solo con le uscite con una torta piena al 100%
             plt.figure(figsize=(10, 6))
             plt.pie([1], labels=["Outcome"], autopct="%1.1f%%", colors=["#FF6347"])
-            plt.title("Entrate e Uscite")
+            plt.title("Income and Outcome")
             plt.savefig("./plots/in_out_pie_plot.png")
             if show:
                 plt.show()
@@ -431,7 +431,7 @@ class Wallet:
             startangle=140,
             colors=colors,  # Usa la lista di colori
         )
-        plt.title("Spese per Categorie")
+        plt.title("Expenses by Category")
         plt.savefig("./plots/category_pie_plot.png")
         if show:
             plt.show()
@@ -458,7 +458,7 @@ class Wallet:
             startangle=140,
             colors=colors,  # Usa la lista di colori
         )
-        plt.title("Spese per Conto")
+        plt.title("Expenses Across Different Accounts")
         plt.savefig("./plots/conto_pie_plot.png")
         if show:
             plt.show()

@@ -1,6 +1,7 @@
 # Stati per la conversazione
 from datetime import datetime, timedelta
 import os
+from dotenv import load_dotenv
 import pandas as pd
 from tabulate import tabulate
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -16,6 +17,8 @@ from telegram.ext import (
 from wallet import Wallet
 from config.config import config
 
+load_dotenv()
+
 # Token del bot
 TOKEN = os.getenv("TELEGRAM_TOKEN_WALLET")
 
@@ -23,7 +26,7 @@ TOKEN = os.getenv("TELEGRAM_TOKEN_WALLET")
 AUTHORIZED_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 # Percorso del file csv
-CSV_FILE_PATH = "/home/umberto/prog/money/dati/my_wallet.csv"
+CSV_FILE_PATH = "/home/umberto/prog/money/dati/wallet_simulation.csv"
 
 # data odierna
 NOW = datetime.now()

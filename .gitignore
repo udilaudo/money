@@ -1,9 +1,8 @@
-# ignora la cartella dist
 dist/
 build/
-# ignora le immagini
 imgs/
-# ignora i file notebook
 *.ipynb
 *.spec
 dati/my_wallet.csv
+dati/prova.csv
+.env
