@@ -26,7 +26,9 @@ TOKEN = os.getenv("TELEGRAM_TOKEN_WALLET")
 AUTHORIZED_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 # Percorso del file csv
-CSV_FILE_PATH = "/home/umberto/prog/money/dati/wallet_simulation.csv"
+dir_path = os.path.dirname(os.path.realpath(__file__))
+CSV_FILE_PATH = os.path.join(dir_path, "dati", "wallet_simulation.csv")
+
 
 # data odierna
 NOW = datetime.now()
